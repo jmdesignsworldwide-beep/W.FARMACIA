@@ -57,3 +57,18 @@ reinicia la rama para la siguiente pieza.
 
 Si hay una condición sin resolver, no se construye por encima: se dice "estoy
 bloqueado en X" y se espera. No se avanza fingiendo que el gate pasó.
+
+## Bloqueos pendientes por tanda — `docs/PENDIENTES.md`
+
+La fuente de verdad de los bloqueos vive en `docs/PENDIENTES.md`. Se lee antes
+de cerrar cualquier tanda que aparezca ahí. Vigentes:
+
+- **Tanda 3 — asimetría de seguridad del override:** bajar el candado
+  (molécula → producto **no controlado** / **sin receta**) exige **motivo
+  obligatorio, solo Dueño/Administrador, y registro en `audit_log`**. El
+  esquema quedó en `0013`; la regla que lo hace cumplir se arma en la Tanda 3.
+  **BLOQUEA el cierre de la Tanda 3.**
+- **Tanda 3 — idempotencia del semilla grande (DIGEMAPS)** contra
+  `clave_semilla`: la recarga no duplica lo ya sembrado (si duplica
+  "Penicilinas", la alerta cruzada de alergia falla en silencio).
+  **BLOQUEA el cierre de la Tanda 3.**
