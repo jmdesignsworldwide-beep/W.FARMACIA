@@ -41,6 +41,10 @@ export interface ProductoPayload {
   nombre: string;
   forma_farmaceutica_id: string | null;
   via_administracion_id: string | null;
+  // Laboratorio y presentación: texto libre del selector inteligente
+  // (se busca-o-crea en el servidor). Forman la identidad de DUPLICADO.
+  laboratorio: string | null;
+  presentacion: string | null;
   principios: PrincipioInput[];
   // Empaque / precio
   unidad_base: string | null;
@@ -54,6 +58,7 @@ export interface ProductoPayload {
   requiere_receta: boolean;
   exento_itbis: boolean;
   codigo_barras: string | null;
-  /** El usuario confirmó crear aunque exista un producto equivalente (misma firma). */
-  confirmarEquivalente?: boolean;
+  /** El usuario confirmó crear aunque ya exista un producto DUPLICADO
+   *  (misma firma clínica + mismo laboratorio + misma presentación). */
+  confirmarDuplicado?: boolean;
 }

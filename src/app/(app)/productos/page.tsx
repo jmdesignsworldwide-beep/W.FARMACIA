@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Plus, Package, ShieldAlert, FileText } from 'lucide-react';
+import { Plus, Package, ShieldAlert, FileText, Pencil, Sparkles } from 'lucide-react';
 import { requireCapability } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { LuminousCard } from '@/components/brand/LuminousCard';
@@ -15,6 +15,7 @@ interface ProductoRow {
   requiere_receta: boolean;
   forma_farmaceutica: { nombre: string } | null;
   via_administracion: { nombre: string } | null;
+  laboratorio: { nombre: string } | null;
   producto_principio_activo: Array<{
     orden: number;
     concentracion_valor: number;
@@ -25,7 +26,11 @@ interface ProductoRow {
   }>;
 }
 
-export default async function ProductosPage() {
+export default async function ProductosPage({
+  searchParams,
+}: {
+  searchParams: { alt?: string };
+}) {
   await requireCapability('gestionar_inventario');
   const supabase = createClient();
 
@@ -35,6 +40,7 @@ export default async function ProductosPage() {
       `id, nombre, es_controlado, requiere_receta,
        forma_farmaceutica:forma_farmaceutica_id ( nombre ),
        via_administracion:via_administracion_id ( nombre ),
+       laboratorio:laboratorio_id ( nombre ),
        producto_principio_activo (
          orden, concentracion_valor, concentracion_unidad,
          concentracion_volumen_valor, concentracion_volumen_unidad,
@@ -45,6 +51,7 @@ export default async function ProductosPage() {
     .order('nombre');
 
   const productos = (data as unknown as ProductoRow[]) ?? [];
+  const alt = searchParams.alt?.trim();
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
@@ -64,6 +71,16 @@ export default async function ProductosPage() {
         </Link>
       </header>
 
+      {alt ? (
+        <div className="mb-4 flex items-start gap-2 rounded-control border border-accent/30 bg-accent/10 px-3 py-2.5 text-sm text-ink">
+          <Sparkles size={16} className="mt-0.5 shrink-0 text-accent" />
+          <span>
+            Agregado como <span className="font-medium">marca alternativa</span> — es equivalente a{' '}
+            <span className="font-medium">{alt}</span>. Ambas aparecerán juntas en el mostrador.
+          </span>
+        </div>
+      ) : null}
+
       {productos.length === 0 ? (
         <LuminousCard neutral>
           <EmptyState
@@ -72,10 +89,7 @@ export default async function ProductosPage() {
             icon={<Package size={30} />}
             tone="accent"
             cta={
-              <Link
-                href="/productos/nuevo"
-                className="inline-flex h-10 items-center gap-2 rounded-control brand-gradient px-4 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-95"
-              >
+              <Link href="/productos/nuevo" className="inline-flex h-10 items-center gap-2 rounded-control brand-gradient px-4 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-95">
                 <Plus size={17} /> Crear el primer producto
               </Link>
             }
@@ -91,6 +105,11 @@ export default async function ProductosPage() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-display font-semibold text-ink">{p.nombre}</span>
+                      {p.laboratorio?.nombre ? (
+                        <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-ink-soft">
+                          {p.laboratorio.nombre}
+                        </span>
+                      ) : null}
                       {p.es_controlado ? (
                         <span className="inline-flex items-center gap-1 rounded-full border border-danger/30 bg-danger/10 px-2 py-0.5 text-[11px] font-medium text-danger">
                           <ShieldAlert size={12} /> Controlado
@@ -118,10 +137,18 @@ export default async function ProductosPage() {
                         : 'Sin principios activos aún'}
                     </p>
                   </div>
-                  <div className="shrink-0 text-xs text-ink-faint">
-                    {[p.forma_farmaceutica?.nombre, p.via_administracion?.nombre]
-                      .filter(Boolean)
-                      .join(' · ') || 'forma/vía pendiente'}
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="text-xs text-ink-faint">
+                      {[p.forma_farmaceutica?.nombre, p.via_administracion?.nombre].filter(Boolean).join(' · ') ||
+                        'forma/vía pendiente'}
+                    </span>
+                    <Link
+                      href={`/productos/${p.id}/editar`}
+                      aria-label={`Editar ${p.nombre}`}
+                      className="flex h-9 w-9 items-center justify-center rounded-control text-ink-faint transition-colors hover:bg-surface-2 hover:text-accent"
+                    >
+                      <Pencil size={16} />
+                    </Link>
                   </div>
                 </LuminousCard>
               </li>
