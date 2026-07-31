@@ -25,12 +25,18 @@ El ciclo, sin excepción:
 1. Se termina **una pieza entregable**.
 2. Se **saca el PR de borrador** y se avisa a Marien que está listo para revisión.
 3. Marien revisa en el preview, con sus manos.
-4. Marien aprueba y mergea.
+4. Marien da el visto → **Claude mergea** (squash a `main`) y sigue.
 5. Se **reinicia la rama desde `main` limpio** y arranca la siguiente pieza.
 
 **Un PR por pieza entregable.** No acumular medio módulo en una sola rama: si se
 mergea de un golpe, se pierde la revisión pieza por pieza, que es toda la
 metodología de Marien.
+
+**Marien nunca mergea. El merge es de Claude en cuanto ella da el visto. Ella
+cierra tandas, Claude mergea PRs.** Son dos cosas distintas: cerrar la tanda lo
+aprueba Marien con sus manos; apretar el merge del PR lo hace Claude, sin
+quedarse esperando a que ella entre a GitHub. Dado el visto, Claude mergea y
+reinicia la rama para la siguiente pieza.
 
 ## Reglas no negociables
 
