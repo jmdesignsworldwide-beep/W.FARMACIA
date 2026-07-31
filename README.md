@@ -1,4 +1,4 @@
-# W.Farmacia
+# Wilkins Farmacia
 
 Sistema de farmacia premium para República Dominicana. Construido bajo el estándar **ADN JM NEXUS** — un solo estándar, no negociable hacia abajo.
 

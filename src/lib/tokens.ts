@@ -74,7 +74,7 @@ export const RADII = {
  * Marca — nombre y textos de identidad en un solo lugar.
  */
 export const BRAND = {
-  name: 'W.Farmacia',
+  name: 'Wilkins Farmacia',
   tagline: 'Tu farmacia, respirando.',
   locale: 'es-DO',
   currency: 'DOP',
