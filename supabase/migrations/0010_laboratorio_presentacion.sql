@@ -49,6 +49,9 @@ alter table public.producto
 -- Índice para la detección de DUPLICADO: firma + laboratorio + presentación.
 create index if not exists idx_producto_duplicado
   on public.producto (firma_equivalencia, laboratorio_id, presentacion_id);
+-- Índices de cobertura para las FKs nuevas (el de duplicado lidera con firma).
+create index if not exists idx_producto_laboratorio on public.producto (laboratorio_id);
+create index if not exists idx_producto_presentacion on public.producto (presentacion_id);
 
 -- ── updated_at + auditoría ──
 create trigger trg_laboratorio_updated_at before update on public.laboratorio

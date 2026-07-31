@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { getSessionUser } from '@/lib/auth';
 import { can } from '@/lib/roles';
@@ -8,6 +9,22 @@ import { normaliza } from '@/lib/catalogos';
 import { UNIDADES_CONCENTRACION, UNIDADES_VOLUMEN, type ProductoPayload } from '@/lib/producto';
 
 type Cliente = ReturnType<typeof createClient>;
+
+/**
+ * Cliente service_role SOLO para el "deshacer" interno de una alta abortada.
+ * El rol `authenticated` no tiene DELETE sobre `producto` (0007 lo revocó:
+ * modelo de borrado suave). Sin esto, el rollback de un duplicado no
+ * confirmado fallaría en silencio y el duplicado quedaría persistido —
+ * justo el fallo que la alerta debe impedir. Nunca se usa para leer/escribir
+ * a pedido del usuario; solo para revertir lo que este mismo servidor creó.
+ */
+function admin() {
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } },
+  );
+}
 
 export interface ProductoState {
   ok?: boolean;
@@ -164,7 +181,7 @@ export async function crearProducto(payload: ProductoPayload): Promise<ProductoS
   }
 
   if (!(await insertarRenglones(supabase, prod.id, payload))) {
-    await supabase.from('producto').delete().eq('id', prod.id);
+    await admin().from('producto').delete().eq('id', prod.id);
     return { error: 'No se pudieron guardar los principios activos. Nada quedó a medias.' };
   }
 
@@ -175,7 +192,7 @@ export async function crearProducto(payload: ProductoPayload): Promise<ProductoS
   if (apto) {
     const { duplicados, equivalentes } = await evaluarFirma(supabase, prod.id);
     if (duplicados.length > 0 && !payload.confirmarDuplicado) {
-      await supabase.from('producto').delete().eq('id', prod.id);
+      await admin().from('producto').delete().eq('id', prod.id);
       return { duplicados };
     }
     if (equivalentes.length > 0) {
