@@ -34,3 +34,6 @@ yarn-error.log*
 # editor
 .idea
 .vscode
+
+# Archivos de trabajo/prueba efímeros (aplicadores, arneses) — nunca se commitean
+scratch_*

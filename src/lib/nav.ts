@@ -35,6 +35,7 @@ export const NAV: NavGroup[] = [
   {
     titulo: 'Farmacia',
     items: [
+      { href: '/catalogos', label: 'Catálogos', icon: 'Library', cap: 'gestionar_catalogos' },
       { href: '/despacho', label: 'Despacho', icon: 'Pill', cap: 'ver_operacion', proximamente: true },
       { href: '/controlados', label: 'Controlados', icon: 'ShieldCheck', cap: 'despachar_controlados', proximamente: true },
       { href: '/proveedores', label: 'Proveedores', icon: 'Truck', cap: 'gestionar_proveedores', proximamente: true },
