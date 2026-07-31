@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { prewarmEquivalencia } from '@/lib/prewarm';
 
 export interface LoginState {
   error?: string;
@@ -27,6 +28,11 @@ export async function signIn(_prev: LoginState, formData: FormData): Promise<Log
   if (error) {
     return { error: 'Correo o contraseña incorrectos.' };
   }
+
+  // Calienta el camino del panel de equivalencia AQUÍ, donde el usuario ya
+  // espera un instante tras "Entrar", para que su primer uso real esté tibio
+  // (best-effort; nunca bloquea el login más allá de su tope interno).
+  await prewarmEquivalencia(supabase);
 
   redirect(next.startsWith('/') ? next : '/dashboard');
 }
