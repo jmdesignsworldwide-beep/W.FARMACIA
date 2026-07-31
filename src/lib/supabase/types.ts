@@ -142,6 +142,7 @@ export interface Database {
           exento_itbis: boolean;
           codigo_barras: string | null;
           firma_equivalencia: string | null; // mantenida por trigger
+          firma_molecula: string | null; // mantenida por trigger (0011): principios+forma+vía, sin concentración
           activo: boolean;
           eliminado_en: string | null;
           created_at: string;

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Plus, Package, ShieldAlert, FileText, Pencil, Sparkles } from 'lucide-react';
+import { Plus, Package, ShieldAlert, FileText, Pencil, Sparkles, GitCompareArrows } from 'lucide-react';
 import { requireCapability } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { LuminousCard } from '@/components/brand/LuminousCard';
@@ -143,8 +143,17 @@ export default async function ProductosPage({
                         'forma/vía pendiente'}
                     </span>
                     <Link
+                      href={`/productos/${p.id}/equivalencias`}
+                      aria-label={`Ver equivalentes de ${p.nombre}`}
+                      title="Equivalentes"
+                      className="flex h-9 w-9 items-center justify-center rounded-control text-ink-faint transition-colors hover:bg-surface-2 hover:text-accent"
+                    >
+                      <GitCompareArrows size={16} />
+                    </Link>
+                    <Link
                       href={`/productos/${p.id}/editar`}
                       aria-label={`Editar ${p.nombre}`}
+                      title="Editar"
                       className="flex h-9 w-9 items-center justify-center rounded-control text-ink-faint transition-colors hover:bg-surface-2 hover:text-accent"
                     >
                       <Pencil size={16} />
