@@ -38,6 +38,7 @@ en producción; el único perfil vivo es el **Dueño** (cuenta real, ver §4).
 | Laboratorio/presentación (0010) | 2 principios `PRUEBA … ZZ` (Losartán, Amoxicilina), 9 productos `PRUEBA …`, 5 laboratorios (Genfar/Genven/MK/Rowe/LabPRUEBA) y 1 presentación (`Caja x 30`) auto-creados por el selector inteligente, + sus renglones | 2026-07-31 | Separar equivalencia clínica de duplicado de inventario: (A) 4 marcas del mismo Losartán 50 → 0 alertas; (B) mismo lab+presentación → alerta de duplicado **y rollback** (bug de duplicado silencioso corregido); (C) re-chequeo al completar un incompleto (con revert); (D) latencia de alta de producto real (≈1.5 s) | **BORRADO** 2026-07-31 (misma ventana) |
 | Panel de equivalencia (0011) | 1 principio `PRUEBA Losartán ZZ`, 3 laboratorios (Genfar/Rowe/MK), 3 productos `PRUEBA Losartán 50 Genfar` / `50 Rowe` / `100 MK` + sus renglones | 2026-07-31 | Demostrar el panel: Rowe = equivalente real (otro lab), 100 MK = "casi coincide" (otra dosis). Latencia de la consulta única medida: **mediana 152 ms** (<500 ms) | **VIVOS para la revisión de Marien** — purgar al cerrar la Tanda 2 |
 | Borrado de catálogos (0012) | 2 usuarios `@wfarmacia-test.local` (cajero, farmacéutico), formas `PRUEBA 0012 …` / `PRUEBA Borrado Target` + 1 producto, y entradas `xy`/`test`/`123` intentadas (no creadas) | 2026-07-31 | Probar el borrado seguro: rechazo en vivo de cajero/farmacéutico por llamada directa (42501/RLS), bloqueo atómico de una forma en uso, borrado de los tres `new` con rastro de actor, y validación de entradas obvias | **BORRADO** 2026-07-31 (misma ventana) |
+| Equivalencia (0013) | 6 principios `PRUEBA EQV …` + 12 productos `PRUEBA EQV …` con sus renglones | 2026-07-31 | Re-correr las 8 pruebas de equivalencia contra prod tras tocar `producto` en la 0013 (nullable del override) | **BORRADO** 2026-07-31 (misma ventana) |
 
 **Verificación:** al cierre de la ventana, `producto` y `principio_activo` con
 prefijo `PRUEBA` = **0** — **salvo** los 3 productos `PRUEBA Losartán …` del
@@ -45,8 +46,10 @@ panel (0011), que quedan **vivos a propósito** para que Marien pruebe el panel
 en el preview. Se purgan al cerrar la Tanda 2 (una línea de service_role).
 
 > **Datos reales (NO prueba):** el seed de `forma_farmaceutica` (15) y
-> `via_administracion` (9) que trae 0007 es **vocabulario real** del sistema, no
-> artefacto de prueba — no se purga.
+> `via_administracion` (9) que trae 0007, **más el semilla clínico de la 0013**
+> (7 familias alergénicas, 10 clases terapéuticas, 5 categorías comerciales, con
+> `clave_semilla` estable), es **vocabulario real** del sistema, no artefacto de
+> prueba — **no se purga**. Es editable/borrable por el Dueño.
 >
 > De aquí en adelante, todo dato ficticio se prefija `PRUEBA`, se registra aquí
 > y se borra en la misma sesión que lo crea.
@@ -65,17 +68,20 @@ se marca el corte en vez de limpiarlo.
 | **583 – 819** | Verificación de 0010 (laboratorio/presentación): altas y borrados de los 9 productos, 5 laboratorios, 1 presentación y 2 principios `PRUEBA`, más los rollbacks del bug de duplicado silencioso y del re-chequeo de edición | Prueba |
 | **820 – 832** | Verificación de 0011 (panel de equivalencia): altas del principio, 3 laboratorios y 3 productos `PRUEBA` del panel (aún vivos para la revisión) | Prueba |
 | **833 – 866** | Verificación de 0012 (borrado de catálogos): borrado de los tres `new` (actor = Dueño), rechazos de cajero/farmacéutico, bloqueo por uso, y altas/borrados de artefactos `PRUEBA` del borrado | Prueba (incluye los DELETE reales de los tres `new`) |
+| **867 – 968** | Aplicación de 0013 (Adenda IV) y su verificación: el **semilla clínico real** (7 familias + 10 clases + 5 categorías, INSERT que permanece) y los `PRUEBA EQV` de la equivalencia (creados y borrados) | Mixto: el semilla es **real**; los `PRUEBA EQV` son prueba |
 
 | Dato | Valor |
 |---|---|
 | **Última entrada al verificar 0007–0009** | id **582** · **2026-07-31** |
 | **Última entrada al verificar 0010** | id **819** · **2026-07-31** |
 | **Última entrada al verificar 0011** | id **832** · **2026-07-31** |
-| **Última entrada al verificar 0012 (CORTE ACTUAL)** | id **866** · **2026-07-31** (avanzará mientras Marien pruebe el panel; se re-marca al purgar el demo) |
+| **Última entrada al verificar 0012** | id **866** · **2026-07-31** |
+| **Última entrada al aplicar/verificar 0013 (CORTE ACTUAL)** | id **968** · **2026-07-31** (incluye el semilla clínico real, que permanece) |
 
 **Interpretación:** el `audit_log` es inviolable, así que las entradas de prueba
 permanecen. **La historia operativa real de Wilkins empieza después de la
-id 866** (salvo las entradas 47–70, que son el vocabulario real de catálogos).
+id 968** (salvo las entradas 47–70 y el semilla clínico de la 0013, que son
+vocabulario real del sistema).
 Cada tanda que genere entradas de prueba actualiza este corte.
 
 > **Nota sobre los tres `new`:** eran errores de dedo reales de Marien
@@ -99,4 +105,4 @@ Cada tanda que genere entradas de prueba actualiza este corte.
 
 ---
 
-_Última actualización: 2026-07-31 (Tanda 2 · catálogos 0012 — editar/borrar seguro/validar; borrado de los tres «new»)._
+_Última actualización: 2026-07-31 (Adenda IV · Pieza 1 · 0013 — esquema del cerebro clínico + semilla)._
