@@ -149,27 +149,43 @@ create unique index if not exists uq_via_norm on public.via_administracion (nomb
 -- ════════════════════════════════════════════════════════════════════
 -- PRODUCTO y la RELACIÓN muchos-a-muchos con concentración por renglón
 -- ════════════════════════════════════════════════════════════════════
+-- El producto es COMPARTIDO (catálogo global de la cadena), NO por sucursal:
+-- no lleva sucursal_id. La EXISTENCIA sí es por sucursal y vive en la tabla
+-- de inventario (existencia_sucursal) de la Tanda 3, con (producto_id,
+-- sucursal_id, existencia, estado_verificacion…). Así la segunda sucursal es
+-- un registro de stock, no un producto duplicado.
 create table if not exists public.producto (
   id                    uuid primary key default gen_random_uuid(),
-  sucursal_id           uuid not null default '00000000-0000-0000-0000-000000000001'
-                          references public.sucursal(id),
   nombre                text not null,
   nombre_normalizado    text generated always as (app.slug(nombre)) stored,
   forma_farmaceutica_id uuid references public.forma_farmaceutica(id),  -- nullable (arranque progresivo)
   via_administracion_id uuid references public.via_administracion(id),  -- nullable
-  precio_venta          numeric(14,2),                                  -- RD$ (§2.6); nullable por carga mínima
-  firma_equivalencia    text,                                           -- mantenida por trigger (§6)
+  -- ── Empaque y precio (unidad base y de caja con factor y precio independiente) ──
+  unidad_base           text,                    -- unidad de venta al detalle (ej. "Tableta", "Unidad")
+  unidad_caja           text,                    -- unidad de empaque/caja (ej. "Caja")
+  factor_caja           numeric check (factor_caja is null or factor_caja > 0),  -- unidades base por caja
+  precio_venta          numeric(14,2),           -- RD$ por unidad base (§2.6); nullable por carga mínima
+  precio_caja           numeric(14,2),           -- RD$ por caja, precio independiente
+  margen_objetivo       numeric(6,2),            -- Idea 4: margen objetivo (%) para inteligencia de precio
+  -- ── Banderas farmacéuticas / fiscales ──
+  es_controlado         boolean not null default false,   -- medicamento controlado (libro de controlados)
+  requiere_receta       boolean not null default false,   -- venta bajo receta
+  exento_itbis          boolean not null default false,   -- ITBIS 18% con exentos (§2.6)
+  codigo_barras         text,                             -- EAN/UPC (escáner, camino principal — Adenda II §4)
+  -- ── Equivalencia e identidad ──
+  firma_equivalencia    text,                    -- mantenida por trigger (§6)
   activo                boolean not null default true,
-  eliminado_en          timestamptz,                                    -- soft-delete (§2.6)
+  eliminado_en          timestamptz,             -- soft-delete (§2.6)
   created_at            timestamptz not null default now(),
   updated_at            timestamptz not null default now()
 );
 comment on table public.producto is
-  'Producto comercial. Su identidad clínica (principios activos + concentración) vive en producto_principio_activo. firma_equivalencia se calcula por trigger (Adenda III §6).';
+  'Producto comercial COMPARTIDO por toda la cadena (sin sucursal_id). Su identidad clínica (principios + concentración) vive en producto_principio_activo; la existencia es por sucursal (Tanda 3). firma_equivalencia se calcula por trigger (Adenda III §6).';
 create index if not exists idx_producto_forma_via
   on public.producto (forma_farmaceutica_id, via_administracion_id);           -- Adenda III §6
 create index if not exists idx_producto_firma on public.producto (firma_equivalencia);  -- §6: comparación
-create index if not exists idx_producto_sucursal on public.producto (sucursal_id);
+create unique index if not exists uq_producto_codigo_barras
+  on public.producto (codigo_barras) where codigo_barras is not null;          -- escáner
 create index if not exists idx_producto_nombre_trgm
   on public.producto using gin (nombre_normalizado extensions.gin_trgm_ops);
 
