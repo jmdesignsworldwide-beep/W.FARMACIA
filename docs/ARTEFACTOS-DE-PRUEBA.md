@@ -34,6 +34,7 @@ en producción; el único perfil vivo es el **Dueño** (cuenta real, ver §4).
 |---|---|---|---|---|
 | Equivalencia 0007/0008/0009 | 4 principios `PRUEBA …` (Losartán, Hidroclorotiazida, Amoxicilina, Ác. clavulánico), 16 productos `PRUEBA …`, 18 renglones de `producto_principio_activo` | 2026-07-31 | Verificar la equivalencia (5 negativas + 3 positivas) contra la base **real** en cada ventana | **BORRADO** 2026-07-31 (cada vez, misma ventana) |
 | Pantalla de catálogos | 1 principio `PRUEBA ZZ Molecula` | 2026-07-31 | Verificar el camino feliz (alta + refresco de la lista) de la pantalla de catálogos | **BORRADO** 2026-07-31 |
+| Formulario de producto | 1 principio `PRUEBA Losartán ZZ`, 1 producto `PRUEBA Producto ZZ` + su renglón | 2026-07-31 | Verificar el alta end-to-end del formulario de producto (identidad + principio + concentración) | **BORRADO** 2026-07-31 |
 
 **Verificación:** al cierre de la ventana, `producto` y `principio_activo` con
 prefijo `PRUEBA` = **0**. No queda ningún dato ficticio en las tablas.
@@ -55,15 +56,15 @@ se marca el corte en vez de limpiarlo.
 |---|---|---|
 | **1 – 46** | Tanda 1: alta del Dueño, prueba de vida, hermeticidad de roles (todas sobre `profiles`) | Prueba/setup |
 | **47 – 70** | Seed de 0007: `forma_farmaceutica` (15) + `via_administracion` (9) | **Real** (vocabulario del sistema) |
-| **71 – 524** | Pruebas de equivalencia de 0007/0008/0009 (principios/productos/renglones `PRUEBA`, creados y borrados en cada ventana de verificación) | Prueba |
+| **71 – 532** | Pruebas de equivalencia de 0007/0008/0009 (principios/productos/renglones `PRUEBA`, creados y borrados en cada ventana de verificación) | Prueba |
 
 | Dato | Valor |
 |---|---|
-| **Última entrada al verificar 0007–0009 (CORTE)** | id **524** · **2026-07-31** (ventanas de PAT de 0007–0009 + verificación) |
+| **Última entrada al verificar 0007–0009 (CORTE)** | id **532** · **2026-07-31** (ventanas de PAT de 0007–0009 + verificación) |
 
 **Interpretación:** el `audit_log` es inviolable, así que las entradas de prueba
 permanecen. **La historia operativa real de Wilkins empieza después de la
-id 524** (salvo las entradas 47–70, que son el vocabulario real de catálogos).
+id 532** (salvo las entradas 47–70, que son el vocabulario real de catálogos).
 Cada tanda que genere entradas de prueba actualiza este corte.
 
 ## 4. Cuentas reales (NO purgar)
