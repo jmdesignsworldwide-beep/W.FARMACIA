@@ -42,6 +42,7 @@ export const CAPABILITIES = [
   'ver_finanzas', // ingresos, márgenes, costos, reportes financieros
   'ver_operacion', // caja, inventario, ventas del día, clientes
   'gestionar_inventario',
+  'gestionar_catalogos', // catálogos críticos (principio activo, forma, vía) — Adenda III §4: solo Dueño/Admin
   'gestionar_proveedores',
   'gestionar_empleados',
   'despachar_controlados',
