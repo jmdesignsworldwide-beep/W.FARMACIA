@@ -86,3 +86,36 @@ export function similitud(a: string, b: string): number {
 
 /** Umbral para considerar dos nombres "parecidos" (aviso, no bloqueo). */
 export const UMBRAL_PARECIDO = 0.42;
+
+/**
+ * Palabras de relleno que casi nunca son vocabulario clínico real. No es una
+ * lista para bloquear —puede haber excepciones— sino para PEDIR CONFIRMACIÓN.
+ */
+const GENERICAS = new Set([
+  'new', 'nuevo', 'nueva', 'test', 'prueba', 'pruebas', 'ejemplo', 'sample',
+  'tbd', 'na', 'n/a', 'xxx', 'aaa', 'asdf', 'qwerty', 'sin nombre', 'ninguno',
+  'nada', 'otro', 'otra', 'varios', 'temp', 'temporal', 'placeholder',
+]);
+
+/**
+ * Detecta una entrada "obvia" que merece confirmación antes de guardar
+ * (Adenda III §4, punto del Dueño): muy corta, sin letras, o una palabra
+ * genérica de relleno. Devuelve el motivo (para el aviso) o null si parece
+ * un nombre real. Es una CONFIRMACIÓN, no un bloqueo — un nombre corto
+ * legítimo se guarda igual tras confirmar.
+ */
+export function entradaSospechosa(nombre: string): string | null {
+  const limpio = nombre.trim();
+  const norm = normaliza(limpio);
+  const soloLetras = norm.replace(/[^a-záéíóúñ]/gi, '');
+  if (limpio.length <= 3) {
+    return `«${limpio}» tiene solo ${limpio.length} ${limpio.length === 1 ? 'letra' : 'letras'}.`;
+  }
+  if (soloLetras.length === 0) {
+    return `«${limpio}» no tiene letras.`;
+  }
+  if (GENERICAS.has(norm)) {
+    return `«${limpio}» parece un texto de relleno, no un nombre real.`;
+  }
+  return null;
+}

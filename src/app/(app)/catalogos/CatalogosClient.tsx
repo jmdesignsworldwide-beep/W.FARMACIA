@@ -1,15 +1,21 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { useFormState, useFormStatus } from 'react-dom';
 import { motion } from 'framer-motion';
 import * as Icons from 'lucide-react';
-import { AlertTriangle, Check, Plus, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, Check, Pencil, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import { LuminousCard } from '@/components/brand/LuminousCard';
 import { EmptyState } from '@/components/brand/EmptyState';
 import { CATALOGOS, type CatalogoDef, type CatalogoTipo } from '@/lib/catalogos';
 import { MOTION } from '@/lib/tokens';
-import { crearValorCatalogo, type CatalogoState } from './actions';
+import {
+  crearValorCatalogo,
+  editarValorCatalogo,
+  borrarValorCatalogo,
+  type CatalogoState,
+} from './actions';
 
 export interface ValorCatalogo {
   id: string;
@@ -45,8 +51,197 @@ function ConfirmarButton() {
       className="inline-flex h-9 items-center gap-1.5 rounded-control border border-warning/40 bg-warning/10 px-3 text-sm font-medium text-warning transition-opacity hover:opacity-90 disabled:opacity-60"
     >
       {pending ? <Icons.Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
-      Crear de todos modos
+      Guardar de todos modos
     </button>
+  );
+}
+
+/** Bloque de avisos blandos (parecidos + entrada sospechosa), compartido. */
+function AvisosBlandos({ state }: { state: CatalogoState }) {
+  if (!state.similares?.length && !state.sospechoso) return null;
+  return (
+    <div className="flex items-start gap-2 text-sm text-ink">
+      <AlertTriangle size={16} className="mt-0.5 shrink-0 text-warning" />
+      <div className="space-y-1">
+        {state.sospechoso ? <p>{state.sospechoso} ¿Seguro que es un valor real?</p> : null}
+        {state.similares?.length ? (
+          <p>
+            Ya existe algo parecido: <span className="font-medium">{state.similares.join(', ')}</span>. Si
+            de verdad es distinto, confírmalo; si no, no lo dupliques.
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/** Una entrada del catálogo: ver / editar / confirmar-borrado. */
+function EntradaCatalogo({ tipo, entrada }: { tipo: CatalogoTipo; entrada: ValorCatalogo }) {
+  const router = useRouter();
+  const [modo, setModo] = useState<'ver' | 'editar' | 'borrar'>('ver');
+  const [nombre, setNombre] = useState(entrada.nombre);
+  const [st, setSt] = useState<CatalogoState>({});
+  const [pending, start] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (modo === 'editar') inputRef.current?.focus();
+  }, [modo]);
+
+  const guardar = (confirmar = false) =>
+    start(async () => {
+      const r = await editarValorCatalogo({ tipo, id: entrada.id, nombre: nombre.trim(), confirmar });
+      setSt(r);
+      if (r.ok) {
+        setModo('ver');
+        router.refresh();
+      }
+    });
+
+  const borrar = () =>
+    start(async () => {
+      const r = await borrarValorCatalogo({ tipo, id: entrada.id, nombre: entrada.nombre });
+      setSt(r);
+      if (r.ok) router.refresh();
+      // Bloqueado (en uso) o error: volver a "ver" para mostrar el aviso
+      // (el conteo «La usan N productos» se renderiza en ese modo).
+      else setModo('ver');
+    });
+
+  const cancelar = () => {
+    setModo('ver');
+    setNombre(entrada.nombre);
+    setSt({});
+  };
+
+  // ── Ver ── (píldora que fluye en línea; ocupa fila completa solo si hay aviso)
+  if (modo === 'ver') {
+    return (
+      <li className={st.enUso || st.error ? 'w-full' : ''}>
+        <div className="group inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 py-1 pl-3 pr-1.5 text-sm text-ink">
+          <span className={entrada.activo ? '' : 'opacity-45 line-through'}>{entrada.nombre}</span>
+          <span className="flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={() => { setSt({}); setModo('editar'); }}
+              aria-label={`Editar ${entrada.nombre}`}
+              className="flex h-6 w-6 items-center justify-center rounded-full text-ink-faint transition-colors hover:bg-surface hover:text-accent"
+            >
+              <Pencil size={13} />
+            </button>
+            <button
+              type="button"
+              onClick={() => { setSt({}); setModo('borrar'); }}
+              aria-label={`Borrar ${entrada.nombre}`}
+              className="flex h-6 w-6 items-center justify-center rounded-full text-ink-faint transition-colors hover:bg-danger/10 hover:text-danger"
+            >
+              <Trash2 size={13} />
+            </button>
+          </span>
+        </div>
+        {/* Bloqueo por uso tras intentar borrar */}
+        {st.enUso ? (
+          <p className="mt-1 flex items-start gap-1.5 rounded-control border border-warning/30 bg-warning/10 px-2.5 py-1.5 text-[13px] text-ink">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0 text-warning" />
+            La usan <span className="font-medium">{st.enUso}</span>{' '}
+            {st.enUso === 1 ? 'producto' : 'productos'}: no se puede borrar sin romper esos datos.
+          </p>
+        ) : null}
+        {st.error ? (
+          <p role="alert" className="mt-1 text-[13px] text-danger">{st.error}</p>
+        ) : null}
+      </li>
+    );
+  }
+
+  // ── Confirmar borrado ──
+  if (modo === 'borrar') {
+    return (
+      <li className="w-full basis-full">
+        <div className="rounded-control border border-danger/30 bg-danger/[0.06] px-3 py-2.5">
+          <p className="text-sm text-ink">
+            ¿Borrar «<span className="font-medium">{entrada.nombre}</span>»? No se puede deshacer.
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={borrar}
+              disabled={pending}
+              className="inline-flex h-9 items-center gap-1.5 rounded-control border border-danger/40 bg-danger/10 px-3 text-sm font-medium text-danger transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              {pending ? <Icons.Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+              Sí, borrar
+            </button>
+            <button
+              type="button"
+              onClick={cancelar}
+              disabled={pending}
+              className="inline-flex h-9 items-center rounded-control border border-line px-3 text-sm text-ink-soft transition-colors hover:text-ink"
+            >
+              Cancelar
+            </button>
+          </div>
+          {st.error ? <p role="alert" className="mt-2 text-[13px] text-danger">{st.error}</p> : null}
+        </div>
+      </li>
+    );
+  }
+
+  // ── Editar ──
+  return (
+    <li className="w-full basis-full">
+      <div className="rounded-control border border-accent/30 bg-accent/[0.04] px-3 py-2.5">
+        <div className="flex items-center gap-2">
+          <input
+            ref={inputRef}
+            value={nombre}
+            maxLength={120}
+            onChange={(e) => setNombre(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); guardar(false); }
+              if (e.key === 'Escape') cancelar();
+            }}
+            aria-label={`Editar nombre de ${entrada.nombre}`}
+            className="h-10 w-full rounded-control border border-line bg-canvas px-3 text-ink outline-none transition-shadow focus:luminous"
+          />
+          <button
+            type="button"
+            onClick={() => guardar(false)}
+            disabled={pending || !nombre.trim()}
+            aria-label="Guardar"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control brand-gradient text-white shadow-sm transition-opacity hover:opacity-95 disabled:opacity-60"
+          >
+            {pending ? <Icons.Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+          </button>
+          <button
+            type="button"
+            onClick={cancelar}
+            disabled={pending}
+            aria-label="Cancelar"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control border border-line text-ink-faint transition-colors hover:text-ink"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        {st.error ? <p role="alert" className="mt-2 text-[13px] text-danger">{st.error}</p> : null}
+        {(st.similares?.length || st.sospechoso) ? (
+          <div className="mt-2.5 rounded-control border border-warning/30 bg-warning/10 p-2.5">
+            <AvisosBlandos state={st} />
+            <div className="mt-2 pl-6">
+              <button
+                type="button"
+                onClick={() => guardar(true)}
+                disabled={pending}
+                className="inline-flex h-9 items-center gap-1.5 rounded-control border border-warning/40 bg-warning/10 px-3 text-sm font-medium text-warning transition-opacity hover:opacity-90 disabled:opacity-60"
+              >
+                {pending ? <Icons.Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+                Guardar de todos modos
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </li>
   );
 }
 
@@ -58,7 +253,6 @@ function CatalogoSeccion({ def, valores }: { def: CatalogoDef; valores: ValorCat
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Al agregar con éxito, limpiar y devolver el foco para seguir cargando.
   useEffect(() => {
     if (state.ok) {
       formRef.current?.reset();
@@ -66,10 +260,11 @@ function CatalogoSeccion({ def, valores }: { def: CatalogoDef; valores: ValorCat
     }
   }, [state.ok]);
 
+  const hayAvisos = Boolean(state.similares?.length || state.sospechoso);
+
   return (
     <motion.div variants={item} className="h-full">
       <LuminousCard neutral className="flex h-full flex-col">
-        {/* Cabecera */}
         <div className="flex items-start gap-3">
           <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-surface-2 text-accent">
             <Icon name={def.icon} size={20} />
@@ -100,34 +295,22 @@ function CatalogoSeccion({ def, valores }: { def: CatalogoDef; valores: ValorCat
           <SubmitButton />
         </form>
 
-        {/* Éxito */}
-        {state.ok ? (
+        {state.ok && state.creado ? (
           <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-accent">
             <Check size={15} /> Agregado «{state.creado}».
           </p>
         ) : null}
 
-        {/* Error */}
         {state.error ? (
-          <p
-            role="alert"
-            className="mt-3 rounded-control border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
-          >
+          <p role="alert" className="mt-3 rounded-control border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
             {state.error}
           </p>
         ) : null}
 
-        {/* Parecidos: aviso + confirmación (Adenda III §4) */}
-        {state.similares && state.similares.length > 0 ? (
+        {/* Avisos blandos: parecidos y/o entrada sospechosa + confirmación (§4) */}
+        {hayAvisos ? (
           <div className="mt-3 rounded-control border border-warning/30 bg-warning/10 p-3">
-            <p className="flex items-start gap-2 text-sm text-ink">
-              <AlertTriangle size={16} className="mt-0.5 shrink-0 text-warning" />
-              <span>
-                Ya existe algo parecido:{' '}
-                <span className="font-medium">{state.similares.join(', ')}</span>. Si de verdad es
-                distinto, confírmalo; si no, no lo dupliques.
-              </span>
-            </p>
+            <AvisosBlandos state={state} />
             <form action={formAction} className="mt-2.5 pl-6">
               <input type="hidden" name="tipo" value={def.tipo} />
               <input type="hidden" name="nombre" value={state.intento ?? ''} />
@@ -149,15 +332,7 @@ function CatalogoSeccion({ def, valores }: { def: CatalogoDef; valores: ValorCat
           ) : (
             <ul className="flex flex-wrap gap-2">
               {valores.map((v) => (
-                <li
-                  key={v.id}
-                  className={[
-                    'rounded-full border border-line bg-surface-2 px-3 py-1 text-sm text-ink',
-                    v.activo ? '' : 'opacity-45 line-through',
-                  ].join(' ')}
-                >
-                  {v.nombre}
-                </li>
+                <EntradaCatalogo key={v.id} tipo={def.tipo} entrada={v} />
               ))}
             </ul>
           )}
@@ -167,11 +342,7 @@ function CatalogoSeccion({ def, valores }: { def: CatalogoDef; valores: ValorCat
   );
 }
 
-export function CatalogosClient({
-  valores,
-}: {
-  valores: Record<CatalogoTipo, ValorCatalogo[]>;
-}) {
+export function CatalogosClient({ valores }: { valores: Record<CatalogoTipo, ValorCatalogo[]> }) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
       <header className="mb-6">
