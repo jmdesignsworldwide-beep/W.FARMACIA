@@ -14,6 +14,24 @@ gobiernan: `docs/ARQUITECTURA-MAESTRA-FARMACIA.md` y las Adendas.
 - **Marien cierra las tandas**, no Claude. Claude reporta "listo para revisión";
   ella lo prueba con sus manos y lo cierra.
 
+## Ritmo de entrega — un PR por pieza (regla permanente, todos los proyectos)
+
+**Nunca dejar un PR en borrador si ya está listo para revisión.** Un borrador
+no se puede mergear; dejarlo así acumula commits colgando y mantiene producción
+atrás. En cuanto una pieza esté lista, se saca de borrador y se avisa.
+
+El ciclo, sin excepción:
+
+1. Se termina **una pieza entregable**.
+2. Se **saca el PR de borrador** y se avisa a Marien que está listo para revisión.
+3. Marien revisa en el preview, con sus manos.
+4. Marien aprueba y mergea.
+5. Se **reinicia la rama desde `main` limpio** y arranca la siguiente pieza.
+
+**Un PR por pieza entregable.** No acumular medio módulo en una sola rama: si se
+mergea de un golpe, se pierde la revisión pieza por pieza, que es toda la
+metodología de Marien.
+
 ## Reglas no negociables
 
 - **Secretos nunca en el chat, ni en logs, ni en commits — ni parciales ni
