@@ -129,6 +129,8 @@ export interface Database {
           nombre_normalizado: string; // generada
           forma_farmaceutica_id: string | null;
           via_administracion_id: string | null;
+          laboratorio_id: string | null;
+          presentacion_id: string | null;
           unidad_base: string | null;
           unidad_caja: string | null;
           factor_caja: number | null;
@@ -140,6 +142,7 @@ export interface Database {
           exento_itbis: boolean;
           codigo_barras: string | null;
           firma_equivalencia: string | null; // mantenida por trigger
+          firma_molecula: string | null; // mantenida por trigger (0011): principios+forma+vía, sin concentración
           activo: boolean;
           eliminado_en: string | null;
           created_at: string;
@@ -150,6 +153,8 @@ export interface Database {
           nombre: string;
           forma_farmaceutica_id?: string | null;
           via_administracion_id?: string | null;
+          laboratorio_id?: string | null;
+          presentacion_id?: string | null;
           unidad_base?: string | null;
           unidad_caja?: string | null;
           factor_caja?: number | null;
@@ -192,6 +197,32 @@ export interface Database {
           orden?: number;
         };
         Update: Partial<Database['public']['Tables']['producto_principio_activo']['Insert']>;
+        Relationships: [];
+      };
+      laboratorio: {
+        Row: {
+          id: string;
+          nombre: string;
+          nombre_normalizado: string; // generada
+          activo: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: { id?: string; nombre: string; activo?: boolean };
+        Update: Partial<Database['public']['Tables']['laboratorio']['Insert']>;
+        Relationships: [];
+      };
+      presentacion: {
+        Row: {
+          id: string;
+          nombre: string;
+          nombre_normalizado: string; // generada
+          activo: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: { id?: string; nombre: string; activo?: boolean };
+        Update: Partial<Database['public']['Tables']['presentacion']['Insert']>;
         Relationships: [];
       };
     };

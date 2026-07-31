@@ -34,9 +34,14 @@ en producción; el único perfil vivo es el **Dueño** (cuenta real, ver §4).
 |---|---|---|---|---|
 | Equivalencia 0007/0008/0009 | 4 principios `PRUEBA …` (Losartán, Hidroclorotiazida, Amoxicilina, Ác. clavulánico), 16 productos `PRUEBA …`, 18 renglones de `producto_principio_activo` | 2026-07-31 | Verificar la equivalencia (5 negativas + 3 positivas) contra la base **real** en cada ventana | **BORRADO** 2026-07-31 (cada vez, misma ventana) |
 | Pantalla de catálogos | 1 principio `PRUEBA ZZ Molecula` | 2026-07-31 | Verificar el camino feliz (alta + refresco de la lista) de la pantalla de catálogos | **BORRADO** 2026-07-31 |
+| Formulario de producto | 1 principio `PRUEBA Losartán ZZ`, 1 producto `PRUEBA Producto ZZ` + su renglón | 2026-07-31 | Verificar el alta end-to-end del formulario de producto (identidad + principio + concentración) | **BORRADO** 2026-07-31 |
+| Laboratorio/presentación (0010) | 2 principios `PRUEBA … ZZ` (Losartán, Amoxicilina), 9 productos `PRUEBA …`, 5 laboratorios (Genfar/Genven/MK/Rowe/LabPRUEBA) y 1 presentación (`Caja x 30`) auto-creados por el selector inteligente, + sus renglones | 2026-07-31 | Separar equivalencia clínica de duplicado de inventario: (A) 4 marcas del mismo Losartán 50 → 0 alertas; (B) mismo lab+presentación → alerta de duplicado **y rollback** (bug de duplicado silencioso corregido); (C) re-chequeo al completar un incompleto (con revert); (D) latencia de alta de producto real (≈1.5 s) | **BORRADO** 2026-07-31 (misma ventana) |
+| Panel de equivalencia (0011) | 1 principio `PRUEBA Losartán ZZ`, 3 laboratorios (Genfar/Rowe/MK), 3 productos `PRUEBA Losartán 50 Genfar` / `50 Rowe` / `100 MK` + sus renglones | 2026-07-31 | Demostrar el panel: Rowe = equivalente real (otro lab), 100 MK = "casi coincide" (otra dosis). Latencia de la consulta única medida: **mediana 152 ms** (<500 ms) | **VIVOS para la revisión de Marien** — purgar al cerrar la Tanda 2 |
 
 **Verificación:** al cierre de la ventana, `producto` y `principio_activo` con
-prefijo `PRUEBA` = **0**. No queda ningún dato ficticio en las tablas.
+prefijo `PRUEBA` = **0** — **salvo** los 3 productos `PRUEBA Losartán …` del
+panel (0011), que quedan **vivos a propósito** para que Marien pruebe el panel
+en el preview. Se purgan al cerrar la Tanda 2 (una línea de service_role).
 
 > **Datos reales (NO prueba):** el seed de `forma_farmaceutica` (15) y
 > `via_administracion` (9) que trae 0007 es **vocabulario real** del sistema, no
@@ -55,15 +60,19 @@ se marca el corte en vez de limpiarlo.
 |---|---|---|
 | **1 – 46** | Tanda 1: alta del Dueño, prueba de vida, hermeticidad de roles (todas sobre `profiles`) | Prueba/setup |
 | **47 – 70** | Seed de 0007: `forma_farmaceutica` (15) + `via_administracion` (9) | **Real** (vocabulario del sistema) |
-| **71 – 524** | Pruebas de equivalencia de 0007/0008/0009 (principios/productos/renglones `PRUEBA`, creados y borrados en cada ventana de verificación) | Prueba |
+| **71 – 582** | Pruebas de equivalencia de 0007/0008/0009 (principios/productos/renglones `PRUEBA`, creados y borrados en cada ventana de verificación) | Prueba |
+| **583 – 819** | Verificación de 0010 (laboratorio/presentación): altas y borrados de los 9 productos, 5 laboratorios, 1 presentación y 2 principios `PRUEBA`, más los rollbacks del bug de duplicado silencioso y del re-chequeo de edición | Prueba |
+| **820 – 832** | Verificación de 0011 (panel de equivalencia): altas del principio, 3 laboratorios y 3 productos `PRUEBA` del panel (aún vivos para la revisión) | Prueba |
 
 | Dato | Valor |
 |---|---|
-| **Última entrada al verificar 0007–0009 (CORTE)** | id **524** · **2026-07-31** (ventanas de PAT de 0007–0009 + verificación) |
+| **Última entrada al verificar 0007–0009** | id **582** · **2026-07-31** |
+| **Última entrada al verificar 0010** | id **819** · **2026-07-31** |
+| **Última entrada al verificar 0011 (CORTE ACTUAL)** | id **832** · **2026-07-31** (avanzará mientras Marien pruebe el panel; se re-marca al purgar) |
 
 **Interpretación:** el `audit_log` es inviolable, así que las entradas de prueba
 permanecen. **La historia operativa real de Wilkins empieza después de la
-id 524** (salvo las entradas 47–70, que son el vocabulario real de catálogos).
+id 832** (salvo las entradas 47–70, que son el vocabulario real de catálogos).
 Cada tanda que genere entradas de prueba actualiza este corte.
 
 ## 4. Cuentas reales (NO purgar)
@@ -81,4 +90,4 @@ Cada tanda que genere entradas de prueba actualiza este corte.
 
 ---
 
-_Última actualización: 2026-07-31 (Tanda 2 · pantalla de catálogos)._
+_Última actualización: 2026-07-31 (Tanda 2 · panel de equivalencia 0011 — dos listas, consulta única indexada)._
