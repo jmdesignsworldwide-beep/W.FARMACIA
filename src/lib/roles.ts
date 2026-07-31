@@ -1,63 +1,73 @@
 /**
  * ADN JM NEXUS — ROLES
  * ─────────────────────────────────────────────────────────────
- * §2.7: "Esconder un botón no es seguridad." Cada rol se valida en
- * el SERVIDOR, en cada acción y en cada ruta. Estas definiciones son
- * la fuente de verdad compartida entre el cliente (para ocultar UI,
- * como cortesía) y el servidor (para autorizar de verdad).
- *
- * La autorización real ocurre en:
+ * §2.7 + Arquitectura Maestra §1: CINCO roles. Cada uno se valida en
+ * el SERVIDOR, en cada acción y en cada ruta. Esconder un botón no es
+ * seguridad — la autorización real ocurre en:
  *   1. RLS en la base de datos (políticas por rol).
- *   2. requireRole() en Server Components / Actions / Route Handlers.
- * La UI solo esconde; nunca es la barrera.
+ *   2. requireRole()/requireCapability() en Server Components/Actions.
+ *
+ * Tabla de roles (Arquitectura Maestra §1):
+ *   • Dueño         — todo, incluido el panel financiero completo.
+ *   • Administrador — todo lo operativo + reportes + gestión de usuarios.
+ *                     NO altera el historial inviolable (bloqueado en la base
+ *                     para todos) y NO ve ni modifica la cuenta del dueño (RLS).
+ *   • Farmacéutico  — despacho, recetas, controlados, inventario, clientes,
+ *                     vencimientos. NO ve ingresos, márgenes ni finanzas.
+ *   • Cajero        — POS, caja del turno, consulta de inventario y clientes.
+ *                     NO ve costos, márgenes ni panel financiero.
+ *   • Motorista     — SOLO sus órdenes de delivery y el cobro en destino.
+ *                     Vista herméticamente cerrada.
  */
 
-export const ROLES = ['dueno', 'gerente', 'farmaceutico', 'cajero'] as const;
+export const ROLES = [
+  'dueno',
+  'administrador',
+  'farmaceutico',
+  'cajero',
+  'motorista',
+] as const;
 export type Role = (typeof ROLES)[number];
 
 export const ROLE_LABEL: Record<Role, string> = {
   dueno: 'Dueño',
-  gerente: 'Gerente',
+  administrador: 'Administrador',
   farmaceutico: 'Farmacéutico',
   cajero: 'Cajero',
+  motorista: 'Motorista',
 };
 
 /** Capacidades del sistema. Se validan en servidor por acción. */
 export const CAPABILITIES = [
-  'ver_finanzas', // ingresos, márgenes, reportes financieros
-  'ver_operacion', // caja, inventario, ventas del día
+  'ver_finanzas', // ingresos, márgenes, costos, reportes financieros
+  'ver_operacion', // caja, inventario, ventas del día, clientes
   'gestionar_inventario',
   'gestionar_proveedores',
   'gestionar_empleados',
   'despachar_controlados',
   'configurar_sistema',
   'anular_ventas',
+  'operar_delivery', // órdenes de delivery y cobro en destino
 ] as const;
 export type Capability = (typeof CAPABILITIES)[number];
 
 /**
- * Matriz rol → capacidades. El cajero ve lo operativo pero NO ve
- * ingresos ni reportes financieros — y eso se valida en el servidor,
- * no ocultando el enlace (§2.7).
+ * Matriz rol → capacidades.
+ *
+ * Dueño y Administrador comparten las capacidades de la aplicación; lo que
+ * los separa es estructural y vive fuera de esta matriz: el historial es
+ * inviolable para todos (trigger en la base, §2.2) y el Administrador no
+ * puede ver ni modificar la fila del Dueño (política RLS en profiles).
+ *
+ * El Cajero ve lo operativo pero NO finanzas — barrera de servidor, no
+ * ocultar el enlace (§2.7). El Motorista es hermético: solo delivery.
  */
 const MATRIX: Record<Role, Capability[]> = {
   dueno: [...CAPABILITIES],
-  gerente: [
-    'ver_finanzas',
-    'ver_operacion',
-    'gestionar_inventario',
-    'gestionar_proveedores',
-    'gestionar_empleados',
-    'despachar_controlados',
-    'anular_ventas',
-  ],
-  farmaceutico: [
-    'ver_operacion',
-    'gestionar_inventario',
-    'gestionar_proveedores',
-    'despachar_controlados',
-  ],
+  administrador: [...CAPABILITIES],
+  farmaceutico: ['ver_operacion', 'gestionar_inventario', 'despachar_controlados'],
   cajero: ['ver_operacion'],
+  motorista: ['operar_delivery'],
 };
 
 export function can(role: Role, cap: Capability): boolean {
@@ -66,4 +76,9 @@ export function can(role: Role, cap: Capability): boolean {
 
 export function isRole(value: unknown): value is Role {
   return typeof value === 'string' && (ROLES as readonly string[]).includes(value);
+}
+
+/** El rol con vista herméticamente cerrada (solo su módulo). */
+export function esHermetico(role: Role): boolean {
+  return role === 'motorista';
 }

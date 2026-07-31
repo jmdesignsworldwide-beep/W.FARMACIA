@@ -19,7 +19,7 @@ Sistema de farmacia premium para República Dominicana. Construido bajo el está
 | Área | Qué hay |
 |---|---|
 | **ADN visual** | Borde luminoso exacto (§1.1), `tabular-nums` global, count-up en KPIs, dos temas premium (crema cálido + oscuro), **el sello** — cápsula con pulso vital que aparece en sidebar, dashboard y estados vacíos (§1.3), estados vacíos premium (§1.4), bienvenida cinematográfica a prueba de fallos (§1.5). |
-| **Seguridad** | Roles (`dueno`, `gerente`, `farmaceutico`, `cajero`) validados **en servidor** en cada ruta (§2.7). El cajero no ve finanzas — barrera en servidor, no ocultando el enlace. RLS + FORCE en toda tabla. |
+| **Seguridad** | Los **5 roles** (`dueno`, `administrador`, `farmaceutico`, `cajero`, `motorista`) validados **en servidor** en cada ruta (§2.7). El cajero no ve finanzas y el administrador no ve la cuenta del dueño — barrera en servidor, no ocultando el enlace. RLS + FORCE en toda tabla. |
 | **Trazabilidad** | `audit_log` **inviolable** por trigger a nivel de base — INSERT/SELECT únicamente, UPDATE y DELETE bloqueados incluso para el administrador (§2.2). |
 | **Datos DO** | RD$ con `NUMERIC(14,2)`, ITBIS 18% con exentos, fechas DD/MM/AAAA, cédula/RNC validados, redondeo consistente al peso (§2.6). |
 | **Arranque seguro** | El código valida presencia **y formato** de cada variable de entorno al arrancar y **falla ruidosamente** (Museo de Errores #4 y #6). |
@@ -49,9 +49,10 @@ En Vercel / el entorno remoto, cárgalas en **Project Settings → Environment V
 Las migraciones viven numeradas en `supabase/migrations/`:
 
 ```
-0001_fundacion_extensiones_y_helpers.sql   Extensiones, roles, triggers de inviolabilidad y auditoría
-0002_perfiles_y_roles.sql                  Tabla profiles + RLS/FORCE + alta automática de perfil
-0003_auditoria_inviolable.sql              Bitácora audit_log (INSERT/SELECT, inviolable)
+0001_fundacion_extensiones_y_helpers.sql   Extensiones, enum de 5 roles, triggers de inviolabilidad y auditoría
+0002_sucursal.sql                          Tabla sucursal + sucursal por defecto (multi-sucursal desde el esquema)
+0003_perfiles_y_roles.sql                  Tabla profiles (con sucursal_id) + RLS/FORCE + alta automática de perfil
+0004_auditoria_inviolable.sql              Bitácora audit_log (INSERT/SELECT, inviolable)
 ```
 
 Aplícalas con la CLI de Supabase, **usando un PAT temporal que revocas al terminar** (regla de cierre §5.3 #8):

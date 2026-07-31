@@ -4,16 +4,41 @@
  * se reemplaza; por ahora se mantiene a mano y sincronizado con el esquema.
  */
 
-export type AppRole = 'dueno' | 'gerente' | 'farmaceutico' | 'cajero';
+export type AppRole = 'dueno' | 'administrador' | 'farmaceutico' | 'cajero' | 'motorista';
 
 export interface Database {
   public: {
     Tables: {
+      sucursal: {
+        Row: {
+          id: string;
+          nombre: string;
+          codigo: string | null;
+          direccion: string | null;
+          telefono: string | null;
+          es_principal: boolean;
+          activa: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          nombre: string;
+          codigo?: string | null;
+          direccion?: string | null;
+          telefono?: string | null;
+          es_principal?: boolean;
+          activa?: boolean;
+        };
+        Update: Partial<Database['public']['Tables']['sucursal']['Insert']>;
+        Relationships: [];
+      };
       profiles: {
         Row: {
           id: string;
           nombre: string;
           role: AppRole;
+          sucursal_id: string;
           telefono: string | null;
           activo: boolean;
           eliminado_en: string | null;
@@ -24,6 +49,7 @@ export interface Database {
           id: string;
           nombre: string;
           role?: AppRole;
+          sucursal_id?: string;
           telefono?: string | null;
           activo?: boolean;
           eliminado_en?: string | null;

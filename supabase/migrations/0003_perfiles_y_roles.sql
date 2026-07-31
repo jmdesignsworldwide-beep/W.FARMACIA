@@ -1,16 +1,15 @@
 -- ════════════════════════════════════════════════════════════════════
--- W.FARMACIA · Migración 0002 — Perfiles y roles
--- ADN JM NEXUS §2.7 (roles con validación real en servidor)
+-- W.FARMACIA · Migración 0003 — Perfiles y roles
+-- ADN JM NEXUS §2.7 · Arquitectura Maestra §1 (cinco roles)
 -- ════════════════════════════════════════════════════════════════════
--- RLS + FORCE se activan en ESTA MISMA migración que crea la tabla
--- (regla de cierre §5.3 #4). Ni el dueño de la tabla escapa a RLS.
+-- RLS + FORCE en la misma migración que crea la tabla (§5.3 #4).
 --
 -- Modelo de acceso:
 --   • INSERT de perfiles: SOLO por el trigger de alta (handle_new_user),
---     que corre como definer. Se REVOCA el INSERT a la API (anon/authenticated)
---     para que nadie inserte perfiles a mano; el rol se ajusta luego por UPDATE.
---   • UPDATE: solo dueño/gerente (gestionar_empleados). La escalada de
---     privilegios se previene: solo el dueño puede asignar/mantener 'dueno'.
+--     definer. Se REVOCA el INSERT a la API; el rol se ajusta luego por UPDATE.
+--   • SELECT/UPDATE: Dueño ve y edita todo. Administrador gestiona usuarios
+--     PERO no ve ni modifica la cuenta del Dueño (Arquitectura Maestra §1).
+--   • Escalada de privilegios bloqueada: solo el Dueño asigna/mantiene 'dueno'.
 --   • DELETE: prohibido por API (soft-delete vía eliminado_en).
 -- ════════════════════════════════════════════════════════════════════
 
@@ -18,6 +17,8 @@ create table if not exists public.profiles (
   id           uuid primary key references auth.users(id) on delete cascade,
   nombre       text not null,
   role         public.app_role not null default 'cajero',
+  sucursal_id  uuid not null default '00000000-0000-0000-0000-000000000001'
+                 references public.sucursal(id),
   telefono     text,
   activo       boolean not null default true,
   eliminado_en timestamptz,                       -- soft-delete (§2.6)
@@ -26,7 +27,9 @@ create table if not exists public.profiles (
 );
 
 comment on table public.profiles is
-  'Perfil de cada usuario y su rol. Fuente de verdad para RLS y para requireRole() en servidor.';
+  'Perfil de cada usuario, su rol y su sucursal. Fuente de verdad para RLS y para requireRole() en servidor.';
+
+create index if not exists idx_profiles_sucursal on public.profiles (sucursal_id);
 
 -- ── Funciones de rol para RLS (aquí, ya con public.profiles disponible) ──
 -- SECURITY DEFINER para leer profiles sin caer en recursión de RLS.
@@ -64,33 +67,40 @@ create trigger trg_profiles_audit
 alter table public.profiles enable row level security;
 alter table public.profiles force row level security;
 
--- La API (anon/authenticated) no inserta ni borra perfiles directamente.
+-- La API no inserta ni borra perfiles directamente.
 revoke insert, delete on public.profiles from anon, authenticated;
 
--- Lectura: cada quien su propio perfil; dueño/gerente ven todos.
+-- Lectura: cada quien su propio perfil.
 create policy profiles_self_select
   on public.profiles for select
   using (id = auth.uid());
 
+-- Dueño ve todos. Administrador ve todos MENOS la cuenta del Dueño (§1).
 create policy profiles_admin_select
   on public.profiles for select
-  using (app.has_role('dueno', 'gerente'));
+  using (
+    app.has_role('dueno')
+    or (app.has_role('administrador') and role <> 'dueno')
+  );
 
--- INSERT: alcanzable únicamente por el trigger definer (el INSERT de la
--- API está revocado arriba). with check (true) permite el alta del sistema
--- bajo FORCE RLS sin abrir la puerta a inserciones manuales.
+-- INSERT: alcanzable únicamente por el trigger definer (INSERT de la API
+-- revocado). with check (true) permite el alta del sistema bajo FORCE RLS.
 create policy profiles_system_insert
   on public.profiles for insert
   with check (true);
 
--- UPDATE: solo dueño/gerente. Solo el dueño puede dejar/poner el rol 'dueno'
--- (previene la escalada de privilegios de la auditoría de JM FIT, §2.7).
+-- UPDATE: Dueño edita cualquiera; Administrador edita cualquiera MENOS al
+-- Dueño y sin poder crear/mantener un 'dueno' (previene la escalada de
+-- privilegios de la auditoría de JM FIT, §2.7).
 create policy profiles_admin_update
   on public.profiles for update
-  using (app.has_role('dueno', 'gerente'))
+  using (
+    app.has_role('dueno')
+    or (app.has_role('administrador') and role <> 'dueno')
+  )
   with check (
-    app.has_role('dueno', 'gerente')
-    and (role <> 'dueno' or app.has_role('dueno'))
+    app.has_role('dueno')
+    or (app.has_role('administrador') and role <> 'dueno')
   );
 
 -- ── Alta automática de perfil al crear el usuario en auth ──

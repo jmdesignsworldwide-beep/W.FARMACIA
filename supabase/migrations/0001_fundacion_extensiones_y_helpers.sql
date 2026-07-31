@@ -17,11 +17,13 @@ create extension if not exists "pg_trgm";        -- búsqueda difusa (selector i
 -- Esquema de utilidades internas, fuera del alcance de la API pública.
 create schema if not exists app;
 
--- ── Enum de roles (fuente de verdad en la base, espeja src/lib/roles.ts) ──
+-- ── Enum de roles: CINCO roles (Arquitectura Maestra §1, espeja roles.ts) ──
 do $$
 begin
   if not exists (select 1 from pg_type where typname = 'app_role') then
-    create type public.app_role as enum ('dueno', 'gerente', 'farmaceutico', 'cajero');
+    create type public.app_role as enum (
+      'dueno', 'administrador', 'farmaceutico', 'cajero', 'motorista'
+    );
   end if;
 end $$;
 

@@ -41,10 +41,10 @@ alter table public.audit_log force row level security;
 -- app.audit(); UPDATE/DELETE, además, los bloquea el trigger de inviolabilidad.
 revoke insert, update, delete on public.audit_log from anon, authenticated;
 
--- Lectura: solo dueño y gerente.
+-- Lectura: solo Dueño y Administrador.
 create policy audit_log_admin_select
   on public.audit_log for select
-  using (app.has_role('dueno', 'gerente'));
+  using (app.has_role('dueno', 'administrador'));
 
 -- INSERT: alcanzable únicamente por app.audit() (definer). El INSERT de la
 -- API está revocado; with check (true) permite el registro bajo FORCE RLS.
