@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
+import { THEME_COLOR } from '@/lib/tokens';
 
 /**
  * Toggle de tema claro/oscuro. El tema inicial lo fija un script inline
@@ -19,6 +20,10 @@ export function ThemeToggle() {
     const next = !dark;
     setDark(next);
     document.documentElement.classList.toggle('dark', next);
+    document.documentElement.style.colorScheme = next ? 'dark' : 'light';
+    // La barra del navegador sigue al tema real, no al del SO (§1.7).
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', next ? THEME_COLOR.dark : THEME_COLOR.light);
     try {
       localStorage.setItem('wf_theme', next ? 'dark' : 'light');
     } catch {
@@ -44,6 +49,6 @@ export function ThemeToggle() {
  * espíritu: contraste correcto desde el primer frame).
  */
 export function ThemeScript() {
-  const code = `(function(){try{var t=localStorage.getItem('wf_theme');var d=t?t==='dark':true;document.documentElement.classList.toggle('dark',d);document.documentElement.style.colorScheme=d?'dark':'light';}catch(e){document.documentElement.classList.add('dark');}})();`;
+  const code = `(function(){try{var t=localStorage.getItem('wf_theme');var d=t?t==='dark':true;document.documentElement.classList.toggle('dark',d);document.documentElement.style.colorScheme=d?'dark':'light';var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement('meta');m.setAttribute('name','theme-color');document.head.appendChild(m);}m.setAttribute('content',d?'${THEME_COLOR.dark}':'${THEME_COLOR.light}');}catch(e){document.documentElement.classList.add('dark');}})();`;
   return <script dangerouslySetInnerHTML={{ __html: code }} />;
 }

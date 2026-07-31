@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { ThemeScript } from '@/components/layout/ThemeToggle';
-import { BRAND } from '@/lib/tokens';
+import { BRAND, THEME_COLOR } from '@/lib/tokens';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -13,10 +13,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#faf6ee' },
-    { media: '(prefers-color-scheme: dark)', color: '#0b0e14' },
-  ],
+  // Valor SSR por defecto = tema oscuro (el tema por defecto de la app).
+  // El ThemeScript corrige esta meta al tema real antes de pintar, y el
+  // toggle la actualiza en vivo — así la barra del navegador sigue al tema
+  // de la app y no al prefers-color-scheme del SO (que puede diverger).
+  themeColor: THEME_COLOR.dark,
   width: 'device-width',
   initialScale: 1,
 };

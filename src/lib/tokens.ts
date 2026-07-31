@@ -21,6 +21,18 @@ export const ACCENT_RGB = {
   dark: '52, 211, 153', // emerald brillante sobre fondo oscuro
 } as const;
 
+/* ── Color base de cada tema para <meta name="theme-color"> ──
+ * §1.7: el único lugar donde vive el color de la barra del navegador.
+ * Debe seguir al tema REAL de la app (toggle propio, clase .dark), no al
+ * prefers-color-scheme del SO — que puede diverger, porque el tema por
+ * defecto es oscuro con independencia del sistema. Lo consumen layout.tsx
+ * (valor SSR por defecto) y el ThemeScript/toggle (ajuste al tema vivo).
+ */
+export const THEME_COLOR = {
+  light: '#faf6ee',
+  dark: '#0b0e14',
+} as const;
+
 /**
  * §1.1 — EL BORDE LUMINOSO (origen: JM Tech)
  * "Un borde que brilla, no una nube detrás."
