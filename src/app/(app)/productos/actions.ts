@@ -10,6 +10,8 @@ export interface ProductoState {
   ok?: boolean;
   productoId?: string;
   error?: string;
+  /** Productos ya existentes con la MISMA firma de equivalencia (aviso, no bloqueo). */
+  equivalentes?: string[];
 }
 
 function num(v: unknown): number | null {
@@ -98,6 +100,37 @@ export async function crearProducto(payload: ProductoPayload): Promise<ProductoS
       // Deshacer el producto para no dejarlo sin su identidad clínica.
       await supabase.from('producto').delete().eq('id', prod.id);
       return { error: 'No se pudieron guardar los principios activos. Nada quedó a medias.' };
+    }
+  }
+
+  // ── Dedup por FIRMA DE EQUIVALENCIA (Adenda III) ──
+  // Solo si el producto es apto para equivalencia: forma + vía + al menos un
+  // principio con concentración. Incompleto = no apto = no se compara (su
+  // firma lleva marcadores '?'/vacío). Si ya existe otro con la misma firma
+  // y el usuario no confirmó, se deshace y se avisa — no se duplica en silencio.
+  const aptoEquivalencia =
+    Boolean(payload.forma_farmaceutica_id) &&
+    Boolean(payload.via_administracion_id) &&
+    principios.length > 0;
+  if (aptoEquivalencia && !payload.confirmarEquivalente) {
+    const { data: nuevo } = await supabase
+      .from('producto')
+      .select('firma_equivalencia')
+      .eq('id', prod.id)
+      .single<{ firma_equivalencia: string | null }>();
+    const firma = nuevo?.firma_equivalencia ?? null;
+    if (firma && !firma.includes('?')) {
+      const { data: equiv } = await supabase
+        .from('producto')
+        .select('nombre')
+        .eq('firma_equivalencia', firma)
+        .is('eliminado_en', null)
+        .neq('id', prod.id);
+      if (equiv && (equiv as { nombre: string }[]).length > 0) {
+        // Deshacer: el usuario decide si de verdad es distinto.
+        await supabase.from('producto').delete().eq('id', prod.id);
+        return { equivalentes: (equiv as { nombre: string }[]).map((e) => e.nombre) };
+      }
     }
   }
 

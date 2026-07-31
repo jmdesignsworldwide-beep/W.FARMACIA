@@ -60,6 +60,7 @@ export function ProductoForm({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [equivalentes, setEquivalentes] = useState<string[] | null>(null);
 
   const [nombre, setNombre] = useState('');
   const [formaId, setFormaId] = useState('');
@@ -83,9 +84,11 @@ export function ProductoForm({
   const quitarRenglon = (i: number) =>
     setPrincipios((prev) => prev.filter((_, idx) => idx !== i));
 
-  const guardar = () => {
+  const guardar = (confirmarEquivalente = false) => {
     setError(null);
+    if (!confirmarEquivalente) setEquivalentes(null);
     const payload: ProductoPayload = {
+      confirmarEquivalente,
       nombre: nombre.trim(),
       forma_farmaceutica_id: formaId || null,
       via_administracion_id: viaId || null,
@@ -109,8 +112,15 @@ export function ProductoForm({
     };
     startTransition(async () => {
       const res = await crearProducto(payload);
-      if (res.ok) router.push('/productos');
-      else setError(res.error ?? 'No se pudo guardar.');
+      if (res.ok) {
+        router.push('/productos');
+        return;
+      }
+      if (res.equivalentes && res.equivalentes.length > 0) {
+        setEquivalentes(res.equivalentes);
+        return;
+      }
+      setError(res.error ?? 'No se pudo guardar.');
     });
   };
 
@@ -354,6 +364,29 @@ export function ProductoForm({
         </div>
       </Seccion>
 
+      {equivalentes && equivalentes.length > 0 ? (
+        <div className="mt-4 rounded-control border border-warning/40 bg-warning/10 p-3">
+          <p className="flex items-start gap-2 text-sm text-ink">
+            <FlaskConical size={16} className="mt-0.5 shrink-0 text-warning" />
+            <span>
+              Ya existe un producto <span className="font-semibold">equivalente</span> (misma
+              molécula, concentración, forma y vía):{' '}
+              <span className="font-medium">{equivalentes.join(', ')}</span>. Si de verdad es un
+              producto distinto, confírmalo; si no, no lo dupliques.
+            </span>
+          </p>
+          <button
+            type="button"
+            onClick={() => guardar(true)}
+            disabled={pending}
+            className="mt-2.5 ml-6 inline-flex h-9 items-center gap-1.5 rounded-control border border-warning/40 bg-warning/10 px-3 text-sm font-medium text-warning transition-opacity hover:opacity-90 disabled:opacity-60"
+          >
+            {pending ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+            Crear de todos modos
+          </button>
+        </div>
+      ) : null}
+
       {error ? (
         <p role="alert" className="mt-4 rounded-control border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
           {error}
@@ -363,7 +396,7 @@ export function ProductoForm({
       <div className="mt-5 flex items-center gap-3">
         <button
           type="button"
-          onClick={guardar}
+          onClick={() => guardar()}
           disabled={pending}
           className="inline-flex h-11 items-center gap-2 rounded-control brand-gradient px-5 font-semibold text-white shadow-sm transition-opacity hover:opacity-95 disabled:opacity-60"
         >

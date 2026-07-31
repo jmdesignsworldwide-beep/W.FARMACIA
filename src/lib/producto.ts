@@ -54,4 +54,6 @@ export interface ProductoPayload {
   requiere_receta: boolean;
   exento_itbis: boolean;
   codigo_barras: string | null;
+  /** El usuario confirmó crear aunque exista un producto equivalente (misma firma). */
+  confirmarEquivalente?: boolean;
 }
