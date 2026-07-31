@@ -109,13 +109,16 @@ supabase/migrations/       Migraciones numeradas, RLS+FORCE en la misma migraci�
 
 ---
 
-## Checklist de cierre pendiente (necesita Supabase conectado)
+## Checklist de cierre §5.3
 
-Estos puntos de §5.3 se completan al enlazar el proyecto real:
+Estado contra el proyecto real de Supabase (`ybhjtgkujojkkmbcffzw`):
 
-- [ ] Migraciones aplicadas por PAT temporal, **y el PAT revocado**.
-- [ ] Un registro creado, guardado y **persistente tras recargar**.
-- [ ] Permisos por rol probados en servidor (incl. acceso por URL directa a `/finanzas` como cajero).
-- [ ] Security Advisor de Supabase limpio.
-- [ ] Deployment Protection activo en Vercel desde el día uno (Museo #7).
+- [x] Migraciones (0001–0006) aplicadas al proyecto real.
+- [x] **Prueba de vida:** primer Dueño creado, elevado y **persistente tras recargar** (login end-to-end verificado con Playwright).
+- [x] Roles probados en servidor: Administrador no ve al Dueño, escalada de privilegios bloqueada por RLS, Motorista hermético.
+- [x] Security Advisor limpio de todo lo corregible (queda solo la protección de contraseñas filtradas, que requiere plan pago).
+- [ ] **Revocar el PAT temporal** (Museo #8) — acción manual del dueño de la cuenta en Supabase → Account → Access Tokens.
+- [ ] Cargar las variables en **Vercel** (`.env.example`) para que el preview/producción levante.
+- [ ] **Deployment Protection** activo en Vercel desde el día uno (Museo #7).
+- [ ] Confirmar **`main`** como Production Branch en Vercel (Museo #2/#3).
 ```
