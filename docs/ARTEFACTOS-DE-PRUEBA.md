@@ -30,15 +30,19 @@ en producción; el único perfil vivo es el **Dueño** (cuenta real, ver §4).
 
 ## 2. Productos, catálogos y principios activos ficticios
 
-**Ninguno en producción.** Las pruebas del modelo de producto y de la
-equivalencia (principios activos, formas, vías, productos combinados) se
-corrieron **en un Postgres LOCAL desechable**, aplicando las migraciones
-`0001→0007` con un shim de Supabase — **nunca contra la base real**. Por eso la
-base de producción **no** contiene productos, catálogos ni principios de mentira.
+| Lote | Qué | Creado | Propósito | Estado |
+|---|---|---|---|---|
+| Equivalencia 0007 | 4 principios `PRUEBA …` (Losartán, Hidroclorotiazida, Amoxicilina, Ác. clavulánico), 16 productos `PRUEBA …`, 18 renglones de `producto_principio_activo` | 2026-07-31 | Verificar la equivalencia (5 negativas + 3 positivas) contra la base **real** tras aplicar 0007 | **BORRADO** 2026-07-31 (mismo día, misma ventana) |
 
-> A partir de la Tanda 2 (cuando el formulario de producto y los catálogos
-> escriban en la base real), cada dato ficticio que se cree para probar se
-> registra aquí, con su ID, fecha y propósito, y se prefija `PRUEBA`.
+**Verificación:** al cierre de la ventana, `producto` y `principio_activo` con
+prefijo `PRUEBA` = **0**. No queda ningún dato ficticio en las tablas.
+
+> **Datos reales (NO prueba):** el seed de `forma_farmaceutica` (15) y
+> `via_administracion` (9) que trae 0007 es **vocabulario real** del sistema, no
+> artefacto de prueba — no se purga.
+>
+> De aquí en adelante, todo dato ficticio se prefija `PRUEBA`, se registra aquí
+> y se borra en la misma sesión que lo crea.
 
 ## 3. Corte del `audit_log` — dónde empieza la historia real
 
@@ -46,17 +50,20 @@ El `audit_log` es **inviolable** (§2.2): las entradas de prueba **no se pueden
 borrar**, y eso es precisamente la evidencia de que la tabla funciona. Por eso
 se marca el corte en vez de limpiarlo.
 
+| Rango de `id` | Origen | ¿Prueba? |
+|---|---|---|
+| **1 – 46** | Tanda 1: alta del Dueño, prueba de vida, hermeticidad de roles (todas sobre `profiles`) | Prueba/setup |
+| **47 – 70** | Seed de 0007: `forma_farmaceutica` (15) + `via_administracion` (9) | **Real** (vocabulario del sistema) |
+| **71 – 186** | Prueba de equivalencia de 0007 (principios/productos/renglones `PRUEBA`, ya borrados) | Prueba |
+
 | Dato | Valor |
 |---|---|
-| Total de entradas al 2026-07-31 | **46** (todas sobre `profiles`) |
-| Primera entrada | id **1** · 2026-07-31 03:01:50 UTC |
-| **Última entrada de prueba/setup (CORTE)** | id **46** · `profiles` DELETE · **2026-07-31 06:54:04 UTC** |
+| **Última entrada al aplicar/probar 0007 (CORTE)** | id **186** · **2026-07-31** (ventana del PAT de 0007) |
 
-**Interpretación:** las entradas **id 1–46** son ciclo de vida de setup de
-Tanda 1 (alta del Dueño, prueba de vida) y de las pruebas de hermeticidad de
-roles (alta/elevación/baja de los usuarios de prueba). **La historia operativa
-real de Wilkins empieza después de la id 46.** Cada tanda que genere entradas de
-prueba registrará aquí su rango.
+**Interpretación:** el `audit_log` es inviolable, así que las entradas de prueba
+permanecen. **La historia operativa real de Wilkins empieza después de la
+id 186** (salvo las entradas 47–70, que son el vocabulario real de catálogos).
+Cada tanda que genere entradas de prueba actualiza este corte.
 
 ## 4. Cuentas reales (NO purgar)
 

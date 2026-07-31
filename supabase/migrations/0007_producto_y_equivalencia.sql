@@ -386,5 +386,19 @@ insert into public.forma_farmaceutica (nombre) values
   ('Parche'), ('Inhalador'), ('Gel'), ('Solución'), ('Polvo')
 on conflict do nothing;
 
--- ── Endurecimiento (mismo criterio que 0006): search_path fijo ya viene en
---    cada función de arriba. Nada de políticas triviales with check(true). ──
+-- ════════════════════════════════════════════════════════════════════
+-- ENDURECIMIENTO DE EJECUCIÓN (criterio §5.3 #10 / 0006)
+-- ════════════════════════════════════════════════════════════════════
+-- search_path fijo ('') ya viene en cada función de arriba. Falta cerrar
+-- la ejecución: las funciones SECURITY DEFINER (que se saltan RLS) NO deben
+-- ser ejecutables por anon/public. Los triggers corren como su dueño y no
+-- requieren EXECUTE del llamador, así que revocarlo no los afecta.
+--   • firma_de: la usa la app (panel de equivalencia) como authenticated.
+--   • set_firma / poke_producto_firma: solo se invocan por trigger.
+revoke execute on function app.firma_de(uuid, uuid, uuid) from public;
+revoke execute on function app.set_firma() from public;
+revoke execute on function app.poke_producto_firma() from public;
+grant execute on function app.firma_de(uuid, uuid, uuid) to authenticated, service_role;
+-- Las funciones IMMUTABLE puras (app.slug, app.conc_norm, app.conc_unidad_base)
+-- no acceden a datos ni RLS; se dejan con EXECUTE público para no romper la
+-- evaluación de las columnas generadas.
