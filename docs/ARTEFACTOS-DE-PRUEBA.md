@@ -54,15 +54,15 @@ se marca el corte en vez de limpiarlo.
 |---|---|---|
 | **1 – 46** | Tanda 1: alta del Dueño, prueba de vida, hermeticidad de roles (todas sobre `profiles`) | Prueba/setup |
 | **47 – 70** | Seed de 0007: `forma_farmaceutica` (15) + `via_administracion` (9) | **Real** (vocabulario del sistema) |
-| **71 – 186** | Prueba de equivalencia de 0007 (principios/productos/renglones `PRUEBA`, ya borrados) | Prueba |
+| **71 – 410** | Pruebas de equivalencia de 0007/0008/0009 (principios/productos/renglones `PRUEBA`, creados y borrados en cada ventana de verificación) | Prueba |
 
 | Dato | Valor |
 |---|---|
-| **Última entrada al aplicar/probar 0007 (CORTE)** | id **186** · **2026-07-31** (ventana del PAT de 0007) |
+| **Última entrada al verificar 0007–0009 (CORTE)** | id **410** · **2026-07-31** (ventanas de PAT de 0007/0008/0009) |
 
 **Interpretación:** el `audit_log` es inviolable, así que las entradas de prueba
 permanecen. **La historia operativa real de Wilkins empieza después de la
-id 186** (salvo las entradas 47–70, que son el vocabulario real de catálogos).
+id 410** (salvo las entradas 47–70, que son el vocabulario real de catálogos).
 Cada tanda que genere entradas de prueba actualiza este corte.
 
 ## 4. Cuentas reales (NO purgar)
