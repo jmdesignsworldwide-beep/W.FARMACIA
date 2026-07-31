@@ -16,6 +16,7 @@ create index if not exists idx_producto_via on public.producto (via_administraci
 -- 2a) profiles — unir SELECT y envolver en subconsulta
 drop policy if exists profiles_self_select on public.profiles;
 drop policy if exists profiles_admin_select on public.profiles;
+drop policy if exists profiles_select on public.profiles; -- idempotencia (re-ejecutable)
 create policy profiles_select on public.profiles
   for select using (
     (select auth.uid()) = id
