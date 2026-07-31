@@ -41,6 +41,32 @@ export const LUMINOUS_BORDER = {
 } as const;
 
 /**
+ * Anillo luminoso tonal (§1.1) parametrizado por color semántico.
+ * Reusa los mismos valores del borde JM Tech pero permite teñirlo con un
+ * token semántico (danger, warning, info…) sin escribir un color a mano:
+ * el color sale siempre de la variable CSS del token.
+ */
+export const TONE_VAR = {
+  accent: '--accent',
+  danger: '--danger',
+  warning: '--warning',
+  info: '--info',
+  success: '--success',
+} as const;
+export type Tone = keyof typeof TONE_VAR;
+
+export function toneRing(tone: Tone, strong = false): string {
+  const v = TONE_VAR[tone];
+  return strong
+    ? `0 0 0 1px hsl(var(${v}) / 0.55), 0 0 12px hsl(var(${v}) / 0.22)`
+    : `0 0 0 1px hsl(var(${v}) / 0.42), 0 0 10px hsl(var(${v}) / 0.15)`;
+}
+
+export function toneColor(tone: Tone): string {
+  return `hsl(var(${TONE_VAR[tone]}))`;
+}
+
+/**
  * §1.2 — UN SOLO TIMING EN TODO EL SISTEMA
  * "stagger 60–80ms, curvas spring." Mismos valores en todos los
  * modales, paneles y count-ups. Si dos pantallas se sienten hechas

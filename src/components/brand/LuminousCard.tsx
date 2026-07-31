@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type CSSProperties, type ReactNode } from 'react';
 
 /**
  * §1.1 — Tarjeta con el borde luminoso JM Tech. `protagonist` sube el
@@ -11,18 +11,23 @@ export function LuminousCard({
   protagonist = false,
   neutral = false,
   className = '',
+  style,
   as: Tag = 'div',
 }: {
   children: ReactNode;
   protagonist?: boolean;
   neutral?: boolean;
   className?: string;
+  style?: CSSProperties;
   as?: 'div' | 'section' | 'article';
 }) {
-  const glow = neutral ? 'ring-soft' : protagonist ? 'luminous-strong' : 'luminous';
+  // Si llega un boxShadow por `style` (p. ej. anillo tonal), ese gana y no se
+  // aplica la clase de glow para no duplicar sombras.
+  const glow = style?.boxShadow ? '' : neutral ? 'ring-soft' : protagonist ? 'luminous-strong' : 'luminous';
   return (
     <Tag
       className={`rounded-card bg-surface p-5 ${glow} transition-shadow duration-300 ${className}`}
+      style={style}
     >
       {children}
     </Tag>

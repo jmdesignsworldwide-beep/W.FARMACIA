@@ -1,35 +1,57 @@
 import { type ReactNode } from 'react';
 import { Capsula } from '@/components/brand/Capsula';
+import { toneColor, toneRing, type Tone } from '@/lib/tokens';
 
 /**
- * §1.4 — Estado vacío premium. Nunca una caja gigante vacía ni un océano
- * de espacio muerto. Medallón con presencia (el sello), título con carácter,
- * mensaje cálido en español dominicano, y un CTA que resuelve.
+ * §1.4 — Estado vacío premium. Nunca una caja gigante vacía. Medallón con
+ * presencia, título con carácter, mensaje cálido en español dominicano y un
+ * CTA que resuelve.
  *
- * "Los estados vacíos son la firma de marca — el cliente los ve el primer
- *  día. Ese es literalmente el primer minuto de su experiencia."
+ * §1.3 — El sello se repite CON ELEGANCIA, no copiado: cuando el estado tiene
+ * un contexto propio (Vencidas, Esta semana, Reordenar), el héroe del medallón
+ * es su ícono de contexto —teñido por su tono semántico— y el sello (la
+ * cápsula) queda integrado como distintivo. Sin contexto, el héroe es el
+ * sello puro con su pulso vital.
  */
 export function EmptyState({
   titulo,
   mensaje,
   cta,
   icon,
+  tone = 'accent',
 }: {
   titulo: string;
   mensaje: string;
   cta?: ReactNode;
   icon?: ReactNode;
+  tone?: Tone;
 }) {
+  const conContexto = Boolean(icon);
   return (
-    <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
-      {/* Medallón con presencia — el sello dentro de un anillo luminoso */}
-      <div className="relative mb-5">
+    <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
+      {/* Medallón con presencia — anillo luminoso teñido por tono (§1.1/§1.3) */}
+      <div className="relative mb-4">
         <div
           aria-hidden
-          className="absolute inset-0 rounded-full brand-gradient opacity-10 blur-xl"
+          className="absolute inset-0 rounded-full blur-xl opacity-[0.12]"
+          style={{ backgroundColor: toneColor(tone) }}
         />
-        <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-surface luminous">
-          {icon ?? <Capsula size={40} pulse />}
+        <div
+          className="relative flex h-20 w-20 items-center justify-center rounded-full bg-surface"
+          style={{ boxShadow: toneRing(tone) }}
+        >
+          {conContexto ? (
+            <span style={{ color: toneColor(tone) }}>{icon}</span>
+          ) : (
+            <Capsula size={40} pulse />
+          )}
+
+          {/* El sello, integrado como distintivo cuando hay ícono de contexto */}
+          {conContexto ? (
+            <span className="absolute -bottom-1.5 -right-1.5 flex h-8 w-8 items-center justify-center rounded-full border border-line bg-surface">
+              <Capsula size={18} />
+            </span>
+          ) : null}
         </div>
       </div>
 
