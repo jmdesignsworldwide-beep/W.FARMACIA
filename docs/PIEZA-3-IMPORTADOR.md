@@ -102,11 +102,23 @@ importador esté listo.
   detectado bajo el título combinado, basura saltada (vacía, totales ×2,
   encabezado repetido), números dominicanos resueltos, serial de Excel a fecha,
   ambigüedad de número/fecha marcada, el mismo Losartán con sus dos lotes.
-- **Alcance v1:** carga **producto + lote**. El **principio activo** se muestra en
-  el preview pero **aún no se enlaza** al modelo clínico (`producto_principio_activo`
-  exige concentración NOT NULL): el producto entra **incompleto** y se enriquece
-  después (Adenda II §1). Enlazar principio+concentración desde el nombre es la
-  siguiente iteración.
+- **Principio activo INFERIDO y enlazado** (decisión de Marien, crítica: sin
+  principio, equivalencia/alergia/controlados quedan dormidos para 5,000 productos):
+  - Del nombre se infiere **principio** (o de la columna) y **dosis**
+    (`concentracion.ts`): "Losartán 50 mg" → Losartán · 50 mg.
+  - Se muestra como **propuesta en ámbar** y se confirma **por patrón** (una vez
+    por principio, no fila por fila): "Losartán ×2 · 50 mg — desmarca si está mal".
+  - Se **cruza contra el catálogo de moléculas existente** (Adenda III §4: no se
+    crean principios desde el importador); lo que no está en el catálogo entra
+    incompleto.
+  - **`0016`**: relaja la concentración obligatoria en `producto_principio_activo`
+    (principio **conocido**, dosis **por confirmar** es mejor que nada — la
+    herencia de controlados y la alerta de alergia usan el principio, no la dosis)
+    y marca `inferido` (distinto de lo confirmado a mano). Necesita ventana de PAT.
+- **Borde blindado:** si el archivo no se lee bien (Excel viejo/raro), lo dice
+  claro y **ofrece guardarlo como CSV** — nunca se carga a medias en silencio.
+  El lector propio se probó contra un `.xlsx` de **strings compartidos** (como los
+  guarda Excel de verdad), además del generador.
 - **Servidor autoridad + progreso:** el navegador arma el preview (librería pura);
   el servidor re-valida e inserta por lotes de 100, marcando `importacion_id`;
   el cliente avanza la barra. Deshacer 24h contable-seguro incluido.

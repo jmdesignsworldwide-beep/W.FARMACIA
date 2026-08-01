@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { LuminousCard } from '@/components/brand/LuminousCard';
 import { CAMPOS } from '@/lib/importar/mapeo';
-import { procesar } from '@/lib/importar/validar';
+import { agruparPrincipios, procesar } from '@/lib/importar/validar';
 import type { FormatoFecha } from '@/lib/importar/valores';
 import { formatNumber } from '@/lib/format';
 import {
@@ -27,6 +27,7 @@ const ETIQUETA: Record<string, string> = { ok: 'lista', aviso: 'aviso', error: '
 export function Importador() {
   const [paso, setPaso] = useState<Paso>('subir');
   const [error, setError] = useState<string | null>(null);
+  const [ofrecerCsv, setOfrecerCsv] = useState(false);
   const [cargando, setCargando] = useState(false);
 
   const [nombre, setNombre] = useState('');
@@ -39,6 +40,7 @@ export function Importador() {
 
   const [progreso, setProgreso] = useState({ procesadas: 0, total: 0, insertadas: 0, errores: 0 });
   const [fallidas, setFallidas] = useState<Array<{ fila: number; nombre: string; motivo: string }>>([]);
+  const [excluidos, setExcluidos] = useState<Set<string>>(new Set()); // grupos de principio NO enlazados
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Re-procesa en vivo con el mapeo/formato actual (librería pura, sin red).
@@ -46,21 +48,24 @@ export function Importador() {
     if (paso === 'subir' || filas.length === 0) return null;
     return procesar(filas as never, { mapeo, formatoFecha: formato, indiceEncabezado: indiceEnc });
   }, [filas, mapeo, formato, indiceEnc, paso]);
+  const grupos = useMemo(() => (preview ? agruparPrincipios(preview.filas) : []), [preview]);
 
   async function subir(file: File) {
     setError(null);
+    setOfrecerCsv(false);
     setCargando(true);
     const fd = new FormData();
     fd.append('archivo', file);
     const res = await parsearArchivo(fd);
     setCargando(false);
-    if ('error' in res) { setError(res.error!); return; }
+    if ('error' in res) { setError(res.error!); setOfrecerCsv(Boolean((res as { sugerirCsv?: boolean }).sugerirCsv)); return; }
     setNombre(res.nombre);
     setDetalle(res.detalle);
     setFilas(res.filas);
     setIndiceEnc(res.indiceEncabezado);
     setHeaders(res.headers);
     setMapeo(res.mapeoRecordado && res.mapeoRecordado.length === res.headers.length ? res.mapeoRecordado : res.mapeoSugerido);
+    setExcluidos(new Set());
     setPaso('mapeo');
   }
 
@@ -82,10 +87,11 @@ export function Importador() {
     });
     if ('error' in meta) { setError(meta.error!); setPaso('mapeo'); return; }
 
+    const confirmados = grupos.map((g) => g.principio.toLowerCase()).filter((k) => !excluidos.has(k));
     let ins = 0; let err = 0; const fall: typeof fallidas = [];
     for (let i = 0; i < datos.length; i += LOTE) {
       const slice = datos.slice(i, i + LOTE);
-      const r = await procesarLote(meta.id, slice, mapeo, formato);
+      const r = await procesarLote(meta.id, slice, mapeo, formato, confirmados);
       if (!('error' in r)) {
         ins += r.insertadas; err += r.errores; fall.push(...r.fallidas);
       }
@@ -152,9 +158,16 @@ export function Importador() {
       </div>
 
       {error ? (
-        <p role="alert" className="mt-4 flex items-start gap-2 rounded-control border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
-          <AlertTriangle size={16} className="mt-0.5 shrink-0" /> {error}
-        </p>
+        <div className="mt-4 rounded-control border border-danger/30 bg-danger/10 px-3 py-2">
+          <p role="alert" className="flex items-start gap-2 text-sm text-danger">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" /> {error}
+          </p>
+          {ofrecerCsv ? (
+            <p className="ml-6 mt-1.5 text-xs text-ink-soft">
+              Abre el archivo en tu programa → <span className="font-medium">Archivo → Guardar como → CSV</span>, y sube ese. No cargamos un Excel a medias.
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       {/* PASO 1 */}
@@ -209,6 +222,30 @@ export function Importador() {
               <p className="mt-2 text-xs text-warning">⚠ Hay números con formato ambiguo (ej. 1.250): se interpretan como miles. Revisa las filas en ámbar.</p>
             ) : null}
           </LuminousCard>
+
+          {/* Principios detectados — confirmación POR PATRÓN (una vez por grupo) */}
+          {grupos.length ? (
+            <LuminousCard neutral className="mt-3">
+              <h2 className="font-display text-base font-semibold text-ink">Principios detectados</h2>
+              <p className="text-xs text-ink-soft">Los inferí del nombre — son una <span className="font-medium">propuesta</span>. Se enlazan a la molécula (por eso funcionan equivalencia, alergia y controlados). Desmarca los que estén mal; la dosis se puede confirmar después.</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {grupos.map((g) => {
+                  const key = g.principio.toLowerCase();
+                  const on = !excluidos.has(key);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setExcluidos((s) => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n; })}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors ${on ? 'border-accent/40 bg-accent/10 text-accent' : 'border-line bg-surface-2 text-ink-faint line-through'}`}
+                    >
+                      {g.principio} <span className="tabular-nums text-xs opacity-70">×{g.conteo}{g.dosisEjemplo ? ` · ${g.dosisEjemplo}` : ' · dosis?'}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </LuminousCard>
+          ) : null}
 
           {/* resumen + preview de 20 */}
           <LuminousCard neutral className="mt-3">

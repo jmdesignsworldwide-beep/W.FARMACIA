@@ -22,14 +22,26 @@ export async function parsearArchivo(formData: FormData) {
   if (!(file instanceof File)) return { error: 'No se recibió el archivo.' };
   if (file.size > 15 * 1024 * 1024) return { error: 'El archivo supera 15 MB.' };
 
+  const esXlsx = /\.xlsx$/i.test(file.name);
   try {
     const buf = Buffer.from(await file.arrayBuffer());
     const { filas, detalle } = parseArchivo(file.name, buf);
+    // Blindaje del borde: si no se leyó bien, NO se carga a medias en silencio.
+    if (!filas.length || filas.every((f) => f.every((c) => c == null || String(c).trim() === ''))) {
+      return { error: 'No pudimos leer contenido en el archivo.', sugerirCsv: esXlsx };
+    }
+    const res = procesar(filas);
+    const utiles = res.filas.filter((f) => f.estado !== 'basura').length;
+    if (res.indiceEncabezado < 0 || utiles === 0) {
+      return {
+        error: 'No pudimos reconocer las columnas de este archivo (¿encabezados raros o un Excel muy viejo?).',
+        sugerirCsv: esXlsx,
+      };
+    }
     // Date → ISO (AAAA-MM-DD) para JSON; el cliente lo re-procesa en vivo.
     const filasJson: Celda[][] = filas.map((f) =>
       f.map((c) => (c instanceof Date ? c.toISOString().slice(0, 10) : (c as Celda))),
     );
-    const res = procesar(filas);
     const supabase = createClient();
     const { data: ultima } = await supabase
       .from('importacion')
@@ -50,7 +62,10 @@ export async function parsearArchivo(formData: FormData) {
       mapeoRecordado,
     };
   } catch {
-    return { error: 'No se pudo leer el archivo. ¿Es un .xlsx o .csv válido?' };
+    return {
+      error: 'No se pudo leer el archivo. Si es un Excel viejo o dañado, guárdalo como CSV y súbelo.',
+      sugerirCsv: esXlsx,
+    };
   }
 }
 
@@ -93,6 +108,14 @@ async function labOCrear(supabase: Cliente, texto: string | null): Promise<strin
   return creado?.id ?? null;
 }
 
+/** El catálogo de moléculas se CRUZA, no se crea desde el importador (Adenda III
+ *  §4: los principios se gestionan en Catálogos). Devuelve el id si ya existe. */
+async function principioExistente(supabase: Cliente, nombre: string): Promise<string | null> {
+  const norm = normaliza(nombre);
+  const { data } = await supabase.from('principio_activo').select('id, nombre_normalizado').eq('activo', true);
+  return (data as { id: string; nombre_normalizado: string }[] | null)?.find((e) => e.nombre_normalizado === norm)?.id ?? null;
+}
+
 export interface ResultadoLote {
   ok: boolean;
   procesadas: number;
@@ -113,6 +136,7 @@ export async function procesarLote(
   filas: Celda[][],
   mapeo: Array<string | ''>,
   formatoFecha: FormatoFecha,
+  principiosConfirmados: string[] = [],
 ): Promise<ResultadoLote | { error: string }> {
   const user = await getSessionUser();
   if (!user || !can(user.role, 'gestionar_inventario')) return { error: 'No tienes permiso para importar.' };
@@ -160,6 +184,27 @@ export async function procesarLote(
         }
         productoId = creado.id;
         productosCreados++;
+
+        // Enlace clínico INFERIDO (cruzando el catálogo de moléculas existente),
+        // solo si el patrón fue confirmado. La concentración puede quedar por
+        // confirmar (null) — el principio ya desbloquea herencia/alergia (0016).
+        const pInf = f.producto.principioInferido;
+        if (pInf && principiosConfirmados.includes(pInf.toLowerCase())) {
+          const paId = await principioExistente(supabase, pInf);
+          if (paId) {
+            const c = f.producto.concentracion;
+            await supabase.from('producto_principio_activo').insert({
+              producto_id: productoId,
+              principio_activo_id: paId,
+              orden: 1,
+              inferido: true,
+              concentracion_valor: c?.valor ?? null,
+              concentracion_unidad: c?.unidad ?? null,
+              concentracion_volumen_valor: c?.vol_valor ?? null,
+              concentracion_volumen_unidad: c?.vol_unidad ?? null,
+            } as never);
+          }
+        }
       }
       if (f.lote) {
         const { error: loteErr } = await supabase.from('lote').insert({

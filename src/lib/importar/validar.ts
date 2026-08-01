@@ -1,16 +1,20 @@
 import type { Celda } from './xlsx';
 import { CAMPOS, normalizarEncabezado, puntajeEncabezado, sugerirMapeo } from './mapeo';
 import { parseFechaDominicana, parseNumeroDominicano, type FormatoFecha } from './valores';
+import { inferirConcentracion, inferirPrincipio, type Concentracion } from './concentracion';
 
 export type EstadoFila = 'ok' | 'aviso' | 'error' | 'basura';
 
 export interface ProductoImp {
   nombre: string;
-  principio: string | null;
+  principio: string | null; // texto crudo de la columna, si vino
   precio: number | null;
   laboratorio: string | null;
   codigo_barras: string | null;
   registro_sanitario: string | null;
+  // Inferido del nombre (propuesta, NO hecho): el principio a enlazar y su dosis.
+  principioInferido: string | null;
+  concentracion: Concentracion | null;
 }
 export interface LoteImp {
   cantidad: number | null;
@@ -98,13 +102,18 @@ export function procesar(filas: Celda[][], opciones: OpcionesProcesar = {}): Res
     const precioP = parseNumeroDominicano(val('precio'));
     if (precioP.ambiguo) { ambig.numero = true; mensajes.push('Precio con formato ambiguo (1.250 ¿son 1250 o 1.25?)'); }
 
+    const principioCol = texto(val('principio')).replace(/\s+/g, ' ') || null;
+    const principioInferido = inferirPrincipio(nombre, principioCol);
+    const concentracion = inferirConcentracion(nombre);
     const producto: ProductoImp = {
       nombre,
-      principio: texto(val('principio')).replace(/\s+/g, ' ') || null,
+      principio: principioCol,
       precio: precioP.valor,
       laboratorio: texto(val('laboratorio')).replace(/\s+/g, ' ') || null,
       codigo_barras: texto(val('codigo_barras')) || null,
       registro_sanitario: texto(val('registro_sanitario')) || null,
+      principioInferido,
+      concentracion,
     };
 
     // ¿Trae lote? (cantidad / vencimiento / costo / número de lote)
@@ -120,8 +129,11 @@ export function procesar(filas: Celda[][], opciones: OpcionesProcesar = {}): Res
       ? { cantidad: cantidadP.valor, vencimiento: fechaP.iso, costo: costoP.valor, numero_lote: numeroLote }
       : null;
 
+    // Inferencia de principio (propuesta): en ámbar para confirmar por patrón.
+    if (!principioInferido) mensajes.push('Sin principio activo (no se detectó)');
+    else if (!concentracion) mensajes.push(`Principio detectado: ${principioInferido} · dosis por confirmar`);
+    else mensajes.push(`Detectado: ${principioInferido} ${concentracion.valor}${concentracion.unidad} — confirma`);
     // Incompletos (Adenda II §1): entran igual, en ámbar.
-    if (!producto.principio) mensajes.push('Sin principio activo');
     if (producto.precio == null) mensajes.push('Sin precio');
     if (lote && lote.vencimiento == null) mensajes.push('Lote sin vencimiento');
     if (lote && lote.costo == null) mensajes.push('Lote sin costo');
@@ -142,4 +154,29 @@ export function procesar(filas: Celda[][], opciones: OpcionesProcesar = {}): Res
   };
   void CAMPOS; // referenciado para el tipado del mapeo aguas arriba
   return { indiceEncabezado, headers, mapeo, filas: out, resumen, ambiguedad: ambig };
+}
+
+export interface GrupoPrincipio {
+  principio: string;
+  conteo: number;
+  dosisEjemplo: string | null; // "50 mg" del primer producto con dosis
+  todasConDosis: boolean;
+}
+
+/** Agrupa los principios inferidos para confirmar POR PATRÓN (una vez por grupo,
+ *  no fila por fila): "40 productos de Losartán, dosis 50 mg — ¿correcto?". */
+export function agruparPrincipios(filas: FilaProcesada[]): GrupoPrincipio[] {
+  const mapa = new Map<string, GrupoPrincipio>();
+  for (const f of filas) {
+    const pi = f.producto?.principioInferido;
+    if (!pi) continue;
+    const key = pi.toLowerCase();
+    const conc = f.producto?.concentracion;
+    const g = mapa.get(key) ?? { principio: pi, conteo: 0, dosisEjemplo: null, todasConDosis: true };
+    g.conteo++;
+    if (conc && !g.dosisEjemplo) g.dosisEjemplo = `${conc.valor} ${conc.unidad}`;
+    if (!conc) g.todasConDosis = false;
+    mapa.set(key, g);
+  }
+  return [...mapa.values()].sort((a, b) => b.conteo - a.conteo);
 }
