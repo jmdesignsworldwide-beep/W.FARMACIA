@@ -51,6 +51,8 @@ create table if not exists public.importacion (
 comment on table public.importacion is 'Una corrida de importación masiva (Tanda 3 · Pieza 3). Lo que crea queda marcado con su id para poder deshacerla completa en 24h. `mapeo` se recuerda para la próxima.';
 create index if not exists idx_importacion_estado on public.importacion (estado);
 create index if not exists idx_importacion_empleado on public.importacion (empleado_id);
+create index if not exists idx_importacion_sucursal on public.importacion (sucursal_id);
+create index if not exists idx_importacion_deshecha_por on public.importacion (deshecha_por);
 create index if not exists idx_importacion_creada on public.importacion (created_at desc);
 
 -- Marca de origen en lo que la importación crea (nullable: lo normal no viene de importar).

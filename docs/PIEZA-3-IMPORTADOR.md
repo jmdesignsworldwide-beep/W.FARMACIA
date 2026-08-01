@@ -52,9 +52,13 @@
   el navegador: si cierra la pestaña **no se pierde nada** (el estado vive en
   `importacion`; se reanuda). El navegador arma el preview; el servidor procesa
   e inserta por lotes actualizando `filas_procesadas`.
-- **Reversible 24h.** Deshacer una corrida revierte lo que creó: soft-delete de
-  los `producto`/`lote` con ese `importacion_id`, y para el stock un movimiento
-  **contrario** (no se borra el libro inviolable). Marca `importacion.deshecha_en`.
+- **Reversible 24h, sin romper la contabilidad.** Deshacer una corrida revierte
+  **solo lo que sigue intacto**: soft-delete de los `producto`/`lote` con ese
+  `importacion_id` **que todavía no tienen historia** (sin `movimiento_inventario`
+  encima; luego, sin ventas — Tanda 4). **Si algo ya se movió, se salta y se
+  reporta**, nunca se borra: *"1,180 revertidos · 60 conservados porque ya tienen
+  movimientos."* Deshacer jamás toca un libro inviolable. Marca
+  `importacion.deshecha_en` / `deshecha_por`.
 
 ## Cómo se divide en piezas revisables
 
