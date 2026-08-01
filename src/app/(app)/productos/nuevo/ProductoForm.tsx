@@ -44,6 +44,7 @@ export interface ProductoInicial {
   requiere_receta: boolean;
   exento_itbis: boolean;
   codigo_barras: string;
+  registro_sanitario: string;
   principios: RenglonPrincipio[];
 }
 
@@ -105,6 +106,7 @@ export function ProductoForm({
   const [requiereReceta, setRequiereReceta] = useState(inicial?.requiere_receta ?? false);
   const [exentoItbis, setExentoItbis] = useState(inicial?.exento_itbis ?? false);
   const [codigoBarras, setCodigoBarras] = useState(inicial?.codigo_barras ?? '');
+  const [registroSanitario, setRegistroSanitario] = useState(inicial?.registro_sanitario ?? '');
 
   const sinPrincipiosEnCatalogo = principiosCatalogo.length === 0;
   const setRenglon = (i: number, patch: Partial<RenglonPrincipio>) =>
@@ -138,6 +140,7 @@ export function ProductoForm({
       requiere_receta: requiereReceta,
       exento_itbis: exentoItbis,
       codigo_barras: codigoBarras || null,
+      registro_sanitario: registroSanitario.trim() || null,
     };
     startTransition(async () => {
       const res = esEdicion
@@ -160,7 +163,7 @@ export function ProductoForm({
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
       <Link href="/productos" className="inline-flex items-center gap-1.5 text-sm text-ink-soft transition-colors hover:text-ink">
         <ArrowLeft size={16} /> Productos
       </Link>
@@ -171,6 +174,10 @@ export function ProductoForm({
         Lo esencial ahora; el resto se enriquece después. Solo el nombre es obligatorio.
       </p>
 
+      {/* Dos columnas en escritorio; una sola en móvil. Izquierda: identidad
+          clínica. Derecha: lo comercial y fiscal. */}
+      <div className="grid grid-cols-1 gap-x-5 lg:grid-cols-2 lg:items-start">
+      <div className="min-w-0">
       <Seccion titulo="Identidad">
         <label className={labelBase} htmlFor="nombre">Nombre comercial</label>
         <input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej. Losartán 50 mg" className={`${inputBase} mt-1.5`} />
@@ -266,7 +273,9 @@ export function ProductoForm({
           </>
         )}
       </Seccion>
+      </div>
 
+      <div className="min-w-0">
       <Seccion titulo="Empaque y precio">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div><label className={labelBase}>Unidad de venta</label><input value={unidadBase} onChange={(e) => setUnidadBase(e.target.value)} placeholder="Tableta" className={`${inputBase} mt-1.5`} /></div>
@@ -291,11 +300,20 @@ export function ProductoForm({
             </label>
           ))}
         </div>
-        <div className="mt-3">
-          <label className={labelBase}>Código de barras</label>
-          <input value={codigoBarras} onChange={(e) => setCodigoBarras(e.target.value)} placeholder="Escanéalo o escríbelo" className={`${inputBase} mt-1.5 sm:max-w-xs`} />
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className={labelBase}>Código de barras</label>
+            <input value={codigoBarras} onChange={(e) => setCodigoBarras(e.target.value)} placeholder="Escanéalo o escríbelo" className={`${inputBase} mt-1.5`} />
+          </div>
+          <div>
+            <label className={labelBase} htmlFor="registro">Registro sanitario</label>
+            <input id="registro" value={registroSanitario} onChange={(e) => setRegistroSanitario(e.target.value)} placeholder="Registro DIGEMAPS" className={`${inputBase} mt-1.5`} />
+            <p className="mt-1 text-[12px] text-ink-faint">Del registro oficial DIGEMAPS. Se llenará solo desde el catálogo cuando exista el buscador.</p>
+          </div>
         </div>
       </Seccion>
+      </div>
+      </div>
 
       {/* Alerta de DUPLICADO (misma marca + presentación) */}
       {duplicados && duplicados.length > 0 ? (

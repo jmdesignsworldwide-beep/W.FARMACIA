@@ -184,6 +184,7 @@ export interface Database {
           requiere_receta: boolean;
           exento_itbis: boolean;
           codigo_barras: string | null;
+          registro_sanitario: string | null; // registro DIGEMAPS del producto (0013)
           firma_equivalencia: string | null; // mantenida por trigger
           firma_molecula: string | null; // mantenida por trigger (0011): principios+forma+vía, sin concentración
           activo: boolean;
@@ -208,6 +209,7 @@ export interface Database {
           requiere_receta?: boolean;
           exento_itbis?: boolean;
           codigo_barras?: string | null;
+          registro_sanitario?: string | null;
           activo?: boolean;
           eliminado_en?: string | null;
         };

@@ -26,6 +26,7 @@ interface ProductoDB {
   requiere_receta: boolean;
   exento_itbis: boolean;
   codigo_barras: string | null;
+  registro_sanitario: string | null;
   laboratorio: { nombre: string } | null;
   presentacion: { nombre: string } | null;
   producto_principio_activo: Array<{
@@ -50,7 +51,7 @@ export default async function EditarProductoPage({ params }: { params: { id: str
       .select(
         `id, nombre, forma_farmaceutica_id, via_administracion_id, unidad_base, unidad_caja,
          factor_caja, precio_venta, precio_caja, margen_objetivo, es_controlado, requiere_receta,
-         exento_itbis, codigo_barras,
+         exento_itbis, codigo_barras, registro_sanitario,
          laboratorio:laboratorio_id ( nombre ),
          presentacion:presentacion_id ( nombre ),
          producto_principio_activo ( orden, principio_activo_id, concentracion_valor,
@@ -96,6 +97,7 @@ export default async function EditarProductoPage({ params }: { params: { id: str
     requiere_receta: p.requiere_receta,
     exento_itbis: p.exento_itbis,
     codigo_barras: p.codigo_barras ?? '',
+    registro_sanitario: p.registro_sanitario ?? '',
     principios,
   };
 
