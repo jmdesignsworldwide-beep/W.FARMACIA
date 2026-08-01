@@ -71,6 +71,7 @@ se marca el corte en vez de limpiarlo.
 | **833 – 866** | Verificación de 0012 (borrado de catálogos): borrado de los tres `new` (actor = Dueño), rechazos de cajero/farmacéutico, bloqueo por uso, y altas/borrados de artefactos `PRUEBA` del borrado | Prueba (incluye los DELETE reales de los tres `new`) |
 | **867 – 968** | Aplicación de 0013 (Adenda IV) y su verificación: el **semilla clínico real** (7 familias + 10 clases + 5 categorías, INSERT que permanece) y los `PRUEBA EQV` de la equivalencia (creados y borrados) | Mixto: el semilla es **real**; los `PRUEBA EQV` son prueba |
 | **969 – 1095** | Aplicación de 0014 (Tanda 3) y su verificación: recálculo de `completitud` de los productos existentes (updates que permanecen) + todos los artefactos `PRUEBA T3/EQV` (creados y borrados) + el actor del caso 4 del override + la inviolabilidad | Prueba (los updates de `completitud` sobre productos reales permanecen) |
+| **1096 – 1101** | Aplicación de 0015 (Tanda 3 · Pieza 3) y su verificación: el modelo de deshacer (1 `importacion` + 2 productos `PRUEBA T3P3` creados y revertidos en suave) | Prueba |
 
 | Dato | Valor |
 |---|---|
@@ -79,7 +80,8 @@ se marca el corte en vez de limpiarlo.
 | **Última entrada al verificar 0011** | id **832** · **2026-07-31** |
 | **Última entrada al verificar 0012** | id **866** · **2026-07-31** |
 | **Última entrada al aplicar/verificar 0013** | id **968** · **2026-07-31** (incluye el semilla clínico real, que permanece) |
-| **Última entrada al aplicar/verificar 0014 (CORTE ACTUAL)** | id **1095** · **2026-08-01** (Tanda 3: recálculo de `completitud` real + artefactos `PRUEBA` de la verificación) |
+| **Última entrada al aplicar/verificar 0014** | id **1095** · **2026-08-01** (Tanda 3 · Pieza 1) |
+| **Última entrada al aplicar/verificar 0015 (CORTE ACTUAL)** | id **1101** · **2026-08-01** (Tanda 3 · Pieza 3: modelo de deshacer de importación) |
 
 **Interpretación:** el `audit_log` es inviolable, así que las entradas de prueba
 permanecen. **La historia operativa real de Wilkins empieza después de la
@@ -117,6 +119,9 @@ Cada tanda que genere entradas de prueba actualiza este corte.
     (borrado en suave → invisible) + **1 fila en cada libro** inviolable
     (`movimiento_inventario` / `historial_costo` / `discrepancia_inventario`).
     Son libros append-only: quedan como parte del corte, marcados `PRUEBA`.
+  - De la verificación de la `0015`: **1 `importacion` `PRUEBA` + 2 productos
+    `PRUEBA T3P3`** (revertidos en suave → invisibles). Borrables si se desea
+    (el producto por `service_role`); se dejan como constancia del corte.
 
 ---
 
