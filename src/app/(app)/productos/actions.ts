@@ -118,8 +118,13 @@ const camposProducto = (payload: ProductoPayload, laboratorioId: string | null, 
   precio_venta: num(payload.precio_venta),
   precio_caja: num(payload.precio_caja),
   margen_objetivo: num(payload.margen_objetivo),
-  es_controlado: Boolean(payload.es_controlado),
-  requiere_receta: Boolean(payload.requiere_receta),
+  // Tres estados (Adenda IV §1): marcar = true (explícito); sin marcar = null
+  // (HEREDA de la molécula). NUNCA false por defecto: un false silencioso sobre
+  // una molécula controlada se saltaría el candado (docs/PENDIENTES.md). El
+  // override a false (bajar el candado) se hace en la pantalla de edición, con
+  // motivo, y lo enforce el trigger de la base.
+  es_controlado: payload.es_controlado ? true : null,
+  requiere_receta: payload.requiere_receta ? true : null,
   exento_itbis: Boolean(payload.exento_itbis),
   codigo_barras: payload.codigo_barras?.trim() || null,
   registro_sanitario: payload.registro_sanitario?.trim() || null,

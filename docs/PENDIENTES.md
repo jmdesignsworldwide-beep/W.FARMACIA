@@ -71,6 +71,19 @@ un cajero, sin receta y fuera del libro.
 
 **⛔ BLOQUEA LA PIEZA 4.** (Independiente de la Pieza 2, que puede seguir.)
 
+> **Estado (2026-08-01):**
+> - **(1) HECHO** — el alta escribe `null` (heredar), no `false`
+>   (`camposProducto`: marcar = `true`, sin marcar = `null`).
+> - **(2) LISTO, falta PAT** — migración `0017` convierte los `false` legados
+>   (sin motivo) a `null`; los `false` **con motivo** (override deliberado) se
+>   respetan. Probado en local (legacy→null, override se queda; idempotente).
+> - **(3) y (4) PENDIENTES** — la pantalla de edición que pide el motivo al bajar
+>   un candado heredado, y mostrar la procedencia de cada candado (heredado /
+>   manual / sobrescrito por quién, con qué motivo). Es la pieza siguiente.
+>
+> El gate se cierra (y se puede cargar el semilla, Pieza 4) cuando (2) esté
+> aplicado en prod y (3)+(4) estén hechas.
+
 ---
 
 ## Tanda 3 — Idempotencia del semilla grande (DIGEMAPS) contra identidad estable
