@@ -58,6 +58,9 @@ export interface ProductoPayload {
   requiere_receta: boolean;
   exento_itbis: boolean;
   codigo_barras: string | null;
+  // Registro sanitario DIGEMAPS (0013). Texto libre por ahora; el buscador del
+  // catálogo oficial lo llenará automáticamente en la pieza siguiente.
+  registro_sanitario: string | null;
   /** El usuario confirmó crear aunque ya exista un producto DUPLICADO
    *  (misma firma clínica + mismo laboratorio + misma presentación). */
   confirmarDuplicado?: boolean;
