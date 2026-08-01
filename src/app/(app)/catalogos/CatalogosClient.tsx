@@ -8,7 +8,7 @@ import * as Icons from 'lucide-react';
 import { AlertTriangle, Check, Pencil, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import { LuminousCard } from '@/components/brand/LuminousCard';
 import { EmptyState } from '@/components/brand/EmptyState';
-import { CATALOGOS, type CatalogoDef, type CatalogoTipo } from '@/lib/catalogos';
+import { CATALOGOS, type CatalogoDef, type CatalogoGrupo, type CatalogoTipo } from '@/lib/catalogos';
 import { MOTION } from '@/lib/tokens';
 import {
   crearValorCatalogo,
@@ -342,6 +342,15 @@ function CatalogoSeccion({ def, valores }: { def: CatalogoDef; valores: ValorCat
   );
 }
 
+const GRUPOS: { grupo: CatalogoGrupo; titulo: string; nota: string }[] = [
+  { grupo: 'clinico', titulo: 'Identidad clínica', nota: 'Definen la equivalencia entre medicamentos.' },
+  {
+    grupo: 'clasificacion',
+    titulo: 'Clasificación',
+    nota: 'Agrupan y enriquecen la molécula — para reportes, alertas de alergia y el mostrador.',
+  },
+];
+
 export function CatalogosClient({ valores }: { valores: Record<CatalogoTipo, ValorCatalogo[]> }) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
@@ -354,16 +363,28 @@ export function CatalogosClient({ valores }: { valores: Record<CatalogoTipo, Val
         </p>
       </header>
 
-      <motion.div
-        variants={container}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-1 gap-4 lg:grid-cols-3"
-      >
-        {CATALOGOS.map((def) => (
-          <CatalogoSeccion key={def.tipo} def={def} valores={valores[def.tipo] ?? []} />
+      <div className="space-y-8">
+        {GRUPOS.map(({ grupo, titulo, nota }) => (
+          <section key={grupo}>
+            <div className="mb-3 flex items-baseline gap-2">
+              <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-soft">
+                {titulo}
+              </h2>
+              <span className="text-xs text-ink-faint">— {nota}</span>
+            </div>
+            <motion.div
+              variants={container}
+              initial="hidden"
+              animate="show"
+              className="grid grid-cols-1 gap-4 lg:grid-cols-3"
+            >
+              {CATALOGOS.filter((d) => d.grupo === grupo).map((def) => (
+                <CatalogoSeccion key={def.tipo} def={def} valores={valores[def.tipo] ?? []} />
+              ))}
+            </motion.div>
+          </section>
         ))}
-      </motion.div>
+      </div>
     </div>
   );
 }

@@ -31,7 +31,14 @@ export interface CatalogoState {
   intento?: string;
 }
 
-const TIPOS: CatalogoTipo[] = ['principio_activo', 'forma_farmaceutica', 'via_administracion'];
+const TIPOS: CatalogoTipo[] = [
+  'principio_activo',
+  'forma_farmaceutica',
+  'via_administracion',
+  'clase_terapeutica',
+  'familia_alergenica',
+  'categoria_comercial',
+];
 
 type Cliente = ReturnType<typeof createClient>;
 
@@ -152,8 +159,9 @@ export async function editarValorCatalogo(input: {
   return { tipo, id, ok: true, editado: nombre };
 }
 
-/** Cuántos productos usan una entrada de catálogo (para el mensaje de bloqueo). */
+/** Cuántas filas usan una entrada de catálogo (para el mensaje de bloqueo). */
 async function contarUsos(supabase: Cliente, tipo: CatalogoTipo, id: string): Promise<number> {
+  // principio activo: lo referencian los renglones de producto
   if (tipo === 'principio_activo') {
     const { count } = await supabase
       .from('producto_principio_activo')
@@ -161,7 +169,22 @@ async function contarUsos(supabase: Cliente, tipo: CatalogoTipo, id: string): Pr
       .eq('principio_activo_id', id);
     return count ?? 1;
   }
-  const col = tipo === 'forma_farmaceutica' ? 'forma_farmaceutica_id' : 'via_administracion_id';
+  // clase y familia: las referencia el principio activo (la molécula)
+  if (tipo === 'clase_terapeutica' || tipo === 'familia_alergenica') {
+    const col = tipo === 'clase_terapeutica' ? 'clase_terapeutica_id' : 'familia_alergenica_id';
+    const { count } = await supabase
+      .from('principio_activo')
+      .select('id', { count: 'exact', head: true })
+      .eq(col, id);
+    return count ?? 1;
+  }
+  // forma, vía y categoría: las referencia el producto
+  const col =
+    tipo === 'forma_farmaceutica'
+      ? 'forma_farmaceutica_id'
+      : tipo === 'via_administracion'
+        ? 'via_administracion_id'
+        : 'categoria_comercial_id';
   const { count } = await supabase
     .from('producto')
     .select('id', { count: 'exact', head: true })

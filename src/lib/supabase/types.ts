@@ -122,6 +122,49 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['via_administracion']['Insert']>;
         Relationships: [];
       };
+      // ── Adenda IV · Catálogos de clasificación (0013) ──
+      clase_terapeutica: {
+        Row: {
+          id: string;
+          nombre: string;
+          nombre_normalizado: string; // generada
+          clave_semilla: string | null;
+          activo: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: { id?: string; nombre: string; clave_semilla?: string | null; activo?: boolean };
+        Update: Partial<Database['public']['Tables']['clase_terapeutica']['Insert']>;
+        Relationships: [];
+      };
+      familia_alergenica: {
+        Row: {
+          id: string;
+          nombre: string;
+          nombre_normalizado: string; // generada
+          clave_semilla: string | null;
+          activo: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: { id?: string; nombre: string; clave_semilla?: string | null; activo?: boolean };
+        Update: Partial<Database['public']['Tables']['familia_alergenica']['Insert']>;
+        Relationships: [];
+      };
+      categoria_comercial: {
+        Row: {
+          id: string;
+          nombre: string;
+          nombre_normalizado: string; // generada
+          clave_semilla: string | null;
+          activo: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: { id?: string; nombre: string; clave_semilla?: string | null; activo?: boolean };
+        Update: Partial<Database['public']['Tables']['categoria_comercial']['Insert']>;
+        Relationships: [];
+      };
       producto: {
         Row: {
           id: string;
