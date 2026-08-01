@@ -32,29 +32,44 @@ existan productos que puedan bajarlo.
 
 > **Estado (2026-08-01 · Tanda 3 · Pieza 1 · migración `0014`):** el candado
 > quedó **ARMADO en la base** (el nivel más fuerte, "ni el administrador"):
-> - CHECK `chk_motivo_control` / `chk_motivo_receta`: un candado en `false` sin
->   `motivo` **no se guarda nunca** (cualquier rol).
 > - Trigger `app.enforce_override_candado`: bajar un candado que **la molécula
->   trae puesto** exige `app.has_role('dueno','administrador')`; subirlo o
->   heredarlo (`null`) no pide nada. La herencia toma lo **más restrictivo** de
->   los principios (`app.molecula_candado`).
+>   trae puesto** exige **motivo** + `app.has_role('dueno','administrador')`;
+>   subirlo o heredarlo (`null`) no pide nada. La herencia toma lo **más
+>   restrictivo** de los principios (`app.molecula_candado`). (Se descartó el
+>   CHECK ciego "false exige motivo": el formulario escribe `false` por defecto y
+>   el CHECK rechazaba los productos ya cargados y las altas nuevas.)
 > - El actor y la fecha quedan en `audit_log` (trigger de auditoría de producto).
 >
 > **Verificado EN PROD (2026-08-01, ventana de PAT de la Tanda 3):** bajar sin
-> motivo → rechazado (`check_violation`); cajero baja → rol lo niega; Dueño con
-> motivo → guarda y queda en `audit_log`; subir sin fricción; herencia
-> multi-principio toma lo más restrictivo. El motivo+rol se exige **solo al bajar
-> un candado que la molécula trae puesto** (no un CHECK ciego: el formulario
-> escribe `es_controlado=false` por defecto y un CHECK lo rechazaría).
->
-> **Sigue bloqueando el cierre** por la capa de app:
-> 1. La pantalla de edición debe pedir el motivo al bajar el candado (hoy la base
->    lo exige, pero la UI aún no lo ofrece).
-> 2. **El formulario escribe `false` por defecto (modelo de dos estados).** Antes
->    de que existan moléculas controladas (semilla DIGEMAPS, Pieza 4), el alta
->    debe pasar a escribir **`null` (heredar)** y migrarse los `false` legados a
->    `null` — si no, un producto con molécula controlada se queda en `false` (no
->    controlado) **sin** motivo ni aprobación, saltándose el candado en silencio.
+> motivo → rechazado; cajero baja → rol lo niega; Dueño con motivo → guarda y
+> queda en `audit_log`; subir sin fricción; herencia multi-principio toma lo más
+> restrictivo.
+
+### ⛔⛔ GATE DURO ANTES DE LA PIEZA 4 — el hueco del `false` legado
+
+**El problema (decisión de Marien, 2026-08-01):** hoy el alta escribe
+`es_controlado = false` al crear. `false` **no** es "hereda" — es "sobrescrito a
+no controlado", y se escribió **sin** motivo ni rol porque no fue un "bajar
+candado". Cuando el semilla DIGEMAPS (Pieza 4) marque la Morfina como controlada,
+**todos los productos ya cargados tienen `false` encima y NO van a heredar**:
+quedan como no controlados, en silencio, sin error. Un controlado despachado por
+un cajero, sin receta y fuera del libro.
+
+**No se carga el semilla (Pieza 4) hasta que esté hecho esto:**
+
+1. **El alta escribe `null`, no `false`.** Crear un producto sin decidir nada =
+   hereda. (`src/app/(app)/productos/actions.ts`: `camposProducto` deja de hacer
+   `Boolean(...)`; marcado explícito = `true`, sin marcar = `null`.)
+2. **Migrar los productos existentes:** todo `false` puesto por defecto (no por
+   decisión con motivo) → `null`. Hoy son pocos; después del semilla es
+   arqueología. (Migración de datos por PAT, **antes** del `insert` del semilla.)
+3. **La pantalla de edición pide el motivo al bajar un candado heredado**, con la
+   validación de rol en servidor (la base ya lo exige; falta la UI).
+4. **En pantalla se ve de dónde viene cada candado:** "controlado (heredado de
+   Morfina)" · "controlado (marcado manualmente)" · "no controlado — sobrescrito
+   por [quién], motivo: [cuál]".
+
+**⛔ BLOQUEA LA PIEZA 4.** (Independiente de la Pieza 2, que puede seguir.)
 
 ---
 

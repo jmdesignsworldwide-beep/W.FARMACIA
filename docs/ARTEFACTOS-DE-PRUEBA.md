@@ -101,11 +101,23 @@ Cada tanda que genere entradas de prueba actualiza este corte.
 
 ## 5. Checklist de purga pre-entrega
 
-- [ ] Confirmar 0 usuarios `@wfarmacia-test.local` en `auth.users`.
-- [ ] Confirmar 0 registros con prefijo `PRUEBA` en `producto`, `principio_activo`, `forma_farmaceutica`, `via_administracion`.
+- [ ] Confirmar 0 registros con prefijo `PRUEBA` **activos** en `producto`, `principio_activo`, `forma_farmaceutica`, `via_administracion`, `medicamento_oficial`.
 - [ ] Rotar la clave provisional del Dueño.
 - [ ] Dejar constancia del corte del `audit_log` (§3) en la entrega — las entradas de prueba permanecen por diseño.
+- [ ] **Residuo inviolable de la Tanda 3 — NO se puede borrar, se documenta:**
+  - **2 usuarios `@wfarmacia-test.local`** en `auth.users` (`dueno@`/`cajero@`).
+    **No se pueden eliminar:** el `audit_log` inviolable los referencia como
+    actor (caso 4 del override y "subir candado" del cajero); borrarlos exigiría
+    violar la bitácora. **Son inertes:** `encrypted_password` vacío (no es hash
+    bcrypt válido), sin `auth.identities`, `email_confirmed_at` null, dominio
+    inexistente (sin magic-link/OTP) y **sin `profile`** → no autentican y, aun
+    con sesión imposible, RLS los deja en deny-all. Verificar antes de entregar
+    que siguen **sin `profile` y sin poder autenticarse**.
+  - De la prueba de inviolabilidad: **1 producto `PRUEBA T3 Inviolabilidad`**
+    (borrado en suave → invisible) + **1 fila en cada libro** inviolable
+    (`movimiento_inventario` / `historial_costo` / `discrepancia_inventario`).
+    Son libros append-only: quedan como parte del corte, marcados `PRUEBA`.
 
 ---
 
-_Última actualización: 2026-07-31 (Adenda IV · Pieza 1 · 0013 — esquema del cerebro clínico + semilla)._
+_Última actualización: 2026-08-01 (Tanda 3 · Pieza 1 · 0014 — inventario por lote: corte 969–1095 y residuo inviolable)._
