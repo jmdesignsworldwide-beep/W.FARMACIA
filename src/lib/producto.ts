@@ -54,8 +54,13 @@ export interface ProductoPayload {
   precio_caja: number | null;
   margen_objetivo: number | null;
   // Banderas
-  es_controlado: boolean;
-  requiere_receta: boolean;
+  // Tres estados (Adenda IV §1): null=hereda de la molécula · true=controlado ·
+  // false=sobrescrito a menos restrictivo (exige motivo + Dueño/Admin, lo enforce
+  // el trigger de la base). El motivo va solo cuando el estado es false.
+  es_controlado: boolean | null;
+  requiere_receta: boolean | null;
+  motivo_control: string | null;
+  motivo_receta: string | null;
   exento_itbis: boolean;
   codigo_barras: string | null;
   // Registro sanitario DIGEMAPS (0013). Texto libre por ahora; el buscador del

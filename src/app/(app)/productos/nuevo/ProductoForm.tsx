@@ -17,6 +17,8 @@ import { crearProducto, actualizarProducto } from '../actions';
 export interface OpcionCatalogo {
   id: string;
   nombre: string;
+  es_controlado?: boolean; // de la molécula, para calcular la herencia del candado
+  requiere_receta?: boolean;
 }
 
 export interface RenglonPrincipio {
@@ -40,8 +42,10 @@ export interface ProductoInicial {
   precio_venta: string;
   precio_caja: string;
   margen_objetivo: string;
-  es_controlado: boolean;
-  requiere_receta: boolean;
+  es_controlado: boolean | null; // tres estados: null=hereda · true=controlado · false=sobrescrito
+  requiere_receta: boolean | null;
+  motivo_control: string;
+  motivo_receta: string;
   exento_itbis: boolean;
   codigo_barras: string;
   registro_sanitario: string;
@@ -69,6 +73,88 @@ function Seccion({ titulo, children }: { titulo: string; children: React.ReactNo
   );
 }
 
+/**
+ * Candado de tres estados (Adenda IV §1 · gate del override). Heredar (null) /
+ * Sí (true) / No (false). Bajar un candado que la molécula TRAE PUESTO exige
+ * motivo y solo Dueño/Admin (lo enforce el trigger de la base; aquí la UI). La
+ * procedencia se ve siempre: heredado de X / manual / sobrescrito por quién.
+ */
+function Candado({
+  titulo, valor, onValor, motivo, onMotivo, hereda, moleculas, puedeBajar, sobrescritoPor,
+}: {
+  titulo: string;
+  valor: boolean | null;
+  onValor: (v: boolean | null) => void;
+  motivo: string;
+  onMotivo: (v: string) => void;
+  hereda: boolean;
+  moleculas: string[];
+  puedeBajar: boolean;
+  sobrescritoPor: string | null;
+}) {
+  const efectivo = valor === null ? hereda : valor;
+  const bajando = valor === false && hereda; // sobrescribir a menos restrictivo
+  const bloqueadoPorRol = bajando && !puedeBajar;
+  const opciones: Array<{ k: string; v: boolean | null; label: string }> = [
+    { k: 'heredar', v: null, label: `Heredar (${hereda ? 'Sí' : 'No'})` },
+    { k: 'si', v: true, label: 'Sí' },
+    { k: 'no', v: false, label: 'No' },
+  ];
+  const procedencia =
+    valor === null
+      ? efectivo
+        ? `Heredado — ${moleculas.join(', ')} lo trae${moleculas.length > 1 ? 'n' : ''} puesto`
+        : 'Heredado — ninguna molécula lo exige'
+      : valor === true
+        ? 'Marcado manualmente'
+        : hereda
+          ? `Sobrescrito${sobrescritoPor ? ' por ' + sobrescritoPor : ''}${motivo ? ` · motivo: ${motivo}` : ''}`
+          : 'No controlado';
+  return (
+    <div className="rounded-control border border-line bg-surface-2/40 p-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium text-ink">{titulo}</span>
+        <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${efectivo ? 'bg-danger/10 text-danger' : 'bg-surface-2 text-ink-soft'}`}>
+          {efectivo ? 'Sí' : 'No'}
+        </span>
+      </div>
+      <div className="mt-1.5 inline-flex overflow-hidden rounded-control border border-line">
+        {opciones.map((o) => {
+          const activo = valor === o.v;
+          const disabled = o.v === false && bloqueadoPorRol;
+          return (
+            <button
+              key={o.k}
+              type="button"
+              disabled={disabled}
+              onClick={() => onValor(o.v)}
+              className={`h-8 border-l border-line px-3 text-xs transition-colors first:border-l-0 ${activo ? 'bg-accent/15 font-medium text-accent' : 'text-ink-soft hover:bg-surface-2'} ${disabled ? 'cursor-not-allowed opacity-40' : ''}`}
+            >
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-1 text-[11px] text-ink-faint">{procedencia}</p>
+      {bajando ? (
+        <div className="mt-1.5">
+          <input
+            value={motivo}
+            onChange={(e) => onMotivo(e.target.value)}
+            placeholder="Motivo para bajar el candado (obligatorio)"
+            className="h-9 w-full rounded-control border border-warning/50 bg-canvas px-2.5 text-sm text-ink outline-none focus:luminous"
+          />
+          <p className="mt-1 text-[11px] text-warning">
+            {bloqueadoPorRol
+              ? 'Solo el Dueño o el Administrador puede bajar un candado heredado.'
+              : 'Solo Dueño/Admin. Queda en la bitácora con tu nombre y el motivo.'}
+          </p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function ProductoForm({
   principiosCatalogo,
   formas,
@@ -76,6 +162,9 @@ export function ProductoForm({
   laboratorios,
   presentaciones,
   inicial,
+  puedeBajarCandado = false,
+  sobrescritoControlPor = null,
+  sobrescritoRecetaPor = null,
 }: {
   principiosCatalogo: OpcionCatalogo[];
   formas: OpcionCatalogo[];
@@ -83,6 +172,9 @@ export function ProductoForm({
   laboratorios: string[];
   presentaciones: string[];
   inicial?: ProductoInicial;
+  puedeBajarCandado?: boolean; // solo Dueño/Admin puede bajar un candado heredado
+  sobrescritoControlPor?: string | null; // quién hizo el override (del audit_log)
+  sobrescritoRecetaPor?: string | null;
 }) {
   const router = useRouter();
   const esEdicion = Boolean(inicial);
@@ -102,11 +194,26 @@ export function ProductoForm({
   const [precioVenta, setPrecioVenta] = useState(inicial?.precio_venta ?? '');
   const [precioCaja, setPrecioCaja] = useState(inicial?.precio_caja ?? '');
   const [margen, setMargen] = useState(inicial?.margen_objetivo ?? '');
-  const [esControlado, setEsControlado] = useState(inicial?.es_controlado ?? false);
-  const [requiereReceta, setRequiereReceta] = useState(inicial?.requiere_receta ?? false);
+  const [esControlado, setEsControlado] = useState<boolean | null>(inicial?.es_controlado ?? null);
+  const [motivoControl, setMotivoControl] = useState(inicial?.motivo_control ?? '');
+  const [requiereReceta, setRequiereReceta] = useState<boolean | null>(inicial?.requiere_receta ?? null);
+  const [motivoReceta, setMotivoReceta] = useState(inicial?.motivo_receta ?? '');
   const [exentoItbis, setExentoItbis] = useState(inicial?.exento_itbis ?? false);
   const [codigoBarras, setCodigoBarras] = useState(inicial?.codigo_barras ?? '');
   const [registroSanitario, setRegistroSanitario] = useState(inicial?.registro_sanitario ?? '');
+
+  // Herencia del candado: qué moléculas (de los principios elegidos) lo traen puesto.
+  const catFlags = new Map(principiosCatalogo.map((p) => [p.id, p]));
+  const molsControladas = principios
+    .map((r) => catFlags.get(r.principio_activo_id))
+    .filter((m): m is OpcionCatalogo => Boolean(m?.es_controlado))
+    .map((m) => m.nombre);
+  const molsReceta = principios
+    .map((r) => catFlags.get(r.principio_activo_id))
+    .filter((m): m is OpcionCatalogo => Boolean(m?.requiere_receta))
+    .map((m) => m.nombre);
+  const heredaControlado = molsControladas.length > 0;
+  const heredaReceta = molsReceta.length > 0;
 
   const sinPrincipiosEnCatalogo = principiosCatalogo.length === 0;
   const setRenglon = (i: number, patch: Partial<RenglonPrincipio>) =>
@@ -138,6 +245,8 @@ export function ProductoForm({
       margen_objetivo: margen ? Number(margen) : null,
       es_controlado: esControlado,
       requiere_receta: requiereReceta,
+      motivo_control: esControlado === false ? motivoControl.trim() || null : null,
+      motivo_receta: requiereReceta === false ? motivoReceta.trim() || null : null,
       exento_itbis: exentoItbis,
       codigo_barras: codigoBarras || null,
       registro_sanitario: registroSanitario.trim() || null,
@@ -288,17 +397,17 @@ export function ProductoForm({
       </Seccion>
 
       <Seccion titulo="Control y fiscal">
-        <div className="space-y-2.5">
-          {[
-            { label: 'Medicamento controlado', v: esControlado, set: setEsControlado },
-            { label: 'Requiere receta', v: requiereReceta, set: setRequiereReceta },
-            { label: 'Exento de ITBIS', v: exentoItbis, set: setExentoItbis },
-          ].map((f) => (
-            <label key={f.label} className="flex cursor-pointer items-center gap-2.5 text-sm text-ink">
-              <input type="checkbox" checked={f.v} onChange={(e) => f.set(e.target.checked)} className="h-4 w-4 rounded border-line accent-[hsl(var(--accent))]" />
-              {f.label}
-            </label>
-          ))}
+        <div className="space-y-3">
+          <Candado titulo="Medicamento controlado" valor={esControlado} onValor={setEsControlado}
+            motivo={motivoControl} onMotivo={setMotivoControl} hereda={heredaControlado}
+            moleculas={molsControladas} puedeBajar={puedeBajarCandado} sobrescritoPor={sobrescritoControlPor} />
+          <Candado titulo="Requiere receta" valor={requiereReceta} onValor={setRequiereReceta}
+            motivo={motivoReceta} onMotivo={setMotivoReceta} hereda={heredaReceta}
+            moleculas={molsReceta} puedeBajar={puedeBajarCandado} sobrescritoPor={sobrescritoRecetaPor} />
+          <label className="flex cursor-pointer items-center gap-2.5 text-sm text-ink">
+            <input type="checkbox" checked={exentoItbis} onChange={(e) => setExentoItbis(e.target.checked)} className="h-4 w-4 rounded border-line accent-[hsl(var(--accent))]" />
+            Exento de ITBIS
+          </label>
         </div>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
