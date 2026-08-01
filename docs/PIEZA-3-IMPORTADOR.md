@@ -68,5 +68,60 @@
   dominicanos, dos entidades, servidor por lotes con progreso, deshacer, reporte).
   Lleva preview para revisión con las manos.
 
+## Fixture feo a propósito — se construye contra basura, no contra un ideal
+
+`docs/fixtures/inventario-sucio-ejemplo.xlsx` (y `.csv` con `;`), generado por
+`generar_fixture.py`. Si el importador lo sobrevive, sobrevive el de Wilkins.
+Cada suciedad está puesta para reventar algo:
+
+| Suciedad en el archivo | Qué prueba |
+|---|---|
+| Título en **celda combinada** (`A1:H1`) + filas vacías arriba | Encontrar la fila de encabezado real, no la primera |
+| **Encabezado repetido** a media hoja | Saltarlo como basura, no importarlo como producto |
+| **Filas de totales** en el medio (`TOTAL PASILLO 1`, `TOTAL GENERAL`, combinadas) | Detectar y saltar subtotales |
+| **`RD$ 51.00`**, `RD$ 1,250.50`, `RD$ 320,00` | Quitar el símbolo y el formato de miles |
+| **`1.250,50` y `1,250.50` en el mismo archivo** | Número dominicano ambiguo → **avisar**, no adivinar |
+| `Vence`: `15/03/2027`, `03/04/2027` (ambigua), `01-12-2026`, y una **fecha real de Excel** (serial en `F5`) | DD/MM vs MM/DD → **preguntar una vez**; parsear serial |
+| `  Losartán 50 mg  ` con **espacios de más** | Normalizar antes de emparejar |
+| **`Losartán 50 mg` dos veces con lotes distintos** (`L-2201`, `L-2202`) | Crear el producto una vez, agregarle **ambos lotes** |
+| `Omeprazol` **solo catálogo** (sin cantidad/lote) | Entra como producto sin lote (incompleto, no error) |
+| Filas **incompletas** (sin costo, sin lote) y **basura** (`xxx`) | Aceptar lo incompleto; descartar lo basura |
+
+Marien probará además con **su propio archivo roto a propósito** cuando el
+importador esté listo.
+
+## Estado de construcción (2026-08-01)
+
+- **Lectura de `.xlsx`: lector propio SIN dependencias** (`src/lib/importar/xlsx.ts`,
+  ZIP + OOXML con el `zlib` nativo). **SheetJS quedó descartado por el entorno:**
+  su CDN está bloqueado por la política de egress (403, no se rodea) y su versión
+  del registro npm arrastra CVEs; ExcelJS sumaba un vuln transitivo. Cero
+  dependencias = Fort Knox limpio. Está aislado: si se habilita el CDN de SheetJS,
+  se cambia solo `leerXlsx`. **Decisión abierta para Marien.**
+- **Probado contra el fixture feo** (xlsx y csv, resultado idéntico): encabezado
+  detectado bajo el título combinado, basura saltada (vacía, totales ×2,
+  encabezado repetido), números dominicanos resueltos, serial de Excel a fecha,
+  ambigüedad de número/fecha marcada, el mismo Losartán con sus dos lotes.
+- **Principio activo INFERIDO y enlazado** (decisión de Marien, crítica: sin
+  principio, equivalencia/alergia/controlados quedan dormidos para 5,000 productos):
+  - Del nombre se infiere **principio** (o de la columna) y **dosis**
+    (`concentracion.ts`): "Losartán 50 mg" → Losartán · 50 mg.
+  - Se muestra como **propuesta en ámbar** y se confirma **por patrón** (una vez
+    por principio, no fila por fila): "Losartán ×2 · 50 mg — desmarca si está mal".
+  - Se **cruza contra el catálogo de moléculas existente** (Adenda III §4: no se
+    crean principios desde el importador); lo que no está en el catálogo entra
+    incompleto.
+  - **`0016`**: relaja la concentración obligatoria en `producto_principio_activo`
+    (principio **conocido**, dosis **por confirmar** es mejor que nada — la
+    herencia de controlados y la alerta de alergia usan el principio, no la dosis)
+    y marca `inferido` (distinto de lo confirmado a mano). Necesita ventana de PAT.
+- **Borde blindado:** si el archivo no se lee bien (Excel viejo/raro), lo dice
+  claro y **ofrece guardarlo como CSV** — nunca se carga a medias en silencio.
+  El lector propio se probó contra un `.xlsx` de **strings compartidos** (como los
+  guarda Excel de verdad), además del generador.
+- **Servidor autoridad + progreso:** el navegador arma el preview (librería pura);
+  el servidor re-valida e inserta por lotes de 100, marcando `importacion_id`;
+  el cliente avanza la barra. Deshacer 24h contable-seguro incluido.
+
 _El `false → null` del override NO va aquí: va en la ventana del override
 (`docs/PENDIENTES.md`), que bloquea la Pieza 4._

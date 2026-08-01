@@ -1,0 +1,16 @@
+FARMACIA WILKINS - INVENTARIO
+
+Descripción;Principio;P. Venta;Laboratorio;Cant;Vence;Costo;Lote
+  Losartán 50 mg  ;Losartán;RD$ 51.00;Genfar;120;15/03/2027;42.00;L-2201
+Amoxicilina 500mg;Amoxicilina;1.250,50;MK;1,000;30/06/2027;980,00;AMX-99
+Ibuprofeno   400mg;Ibuprofeno;RD$ 1,250.50;Genfar;60;03/04/2027;;
+;;;;;;;
+TOTAL PASILLO 1;;RD$ 2,552.00;;;;;
+Descripción;Principio;P. Venta;Laboratorio;Cant;Vence;Costo;Lote
+Metformina 850 mg;Metformina;95.00;Rowe;200;01-12-2026;70.00;MET-01
+Losartán 50 mg;Losartán;;Genfar;40;20/09/2027;42.00;L-2202
+  Omeprazol 20 mg;Omeprazol;RD$ 180.00;Genven;;;;
+Acetaminofén 500 mg;Acetaminofén;1,250.50;MK;500;30/06/2027;900.00;ACE-7
+Azitromicina 500 mg;Azitromicina;RD$ 320,00;Pfizer;30;05/05/2027;;AZI-3
+xxx;xxx;xxx;;;;;
+TOTAL GENERAL;;RD$ 5,000.00;;;;;
