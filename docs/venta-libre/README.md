@@ -71,5 +71,32 @@ vitamina D3 + óxido de zinc · `#205` Vitamina E + extracto de áloe.
    Esa derivación **la decide el farmacéutico**, no una inferencia del sistema.
 4. **Topes de concentración: se guardan** (aunque no se automatice la derivación).
    Si la lista dice `Hasta 500 mg`, un producto de 650 mg **no** es venta libre —
-   eso es una **comparación directa**, no una inferencia. (17 entradas traen tope:
-   `#1,2,3,10,12,15,16,17,24,27,40,93,137,138,187,188,206`.)
+   eso es una **comparación directa**, no una inferencia.
+
+## Migración `0018` — tabla + semilla + función (aplicada tras revisión de Marien)
+
+`supabase/migrations/0018_venta_libre_res_000009-17.sql` — **aditiva, no toca datos
+existentes**. Probada en Postgres local con toda la cadena `0001→0018`: apply limpio,
+idempotente (re-aplicar deja 207, no duplica y **no borra los enlaces**), RLS+FORCE,
+función `SECURITY DEFINER` con `search_path` fijo.
+
+- **Tabla `medicamento_venta_libre`** (referencia, no inventario): 207 filas +
+  `orden`, `nombre_generico`, `concentracion_texto`, `tope_valor`/`tope_unidad`
+  (46 estructurados), `tope_ilegible` (14), `forma_farmaceutica`, `observaciones`,
+  `ambigua` (22), `firma_composicion` (Camino A, null hoy), `fuente`,
+  `fecha_resolucion`, `clave_semilla` único. Idempotente `on conflict (clave_semilla)`
+  (el `do update` **no** toca `firma_composicion`).
+- **Función `app.estado_venta_libre(producto)`** → `(estado, razon, mvl_id, fuente,
+  fecha_resolucion)`. **Camino A + asimetría de seguridad**: `venta_libre` **solo**
+  si la composición coincide **exacto** (firma por IDs) con una entrada **no ambigua**,
+  **enlazada**, y el producto está **dentro del tope**. Cualquier otra cosa →
+  `no_consta` (exige receta). Con **rastro del porqué** (`razon`):
+  `catalogo_incompleto` (hoy, nada enlazado) · `sin_coincidencia` · `entrada_ambigua`
+  · `tope_no_consta` · `producto_sin_principios` · `coincide` · `excede_tope`.
+- **Estado hoy:** 0 enlazadas → la función devuelve `no_consta / catalogo_incompleto`
+  para todo (lado seguro). Se enciende al enlazar con el catálogo (ver `PENDIENTES.md`).
+
+### Procedencia en pantalla (igual que el candado del override)
+- **"venta libre (Res. 000009-17)"** — `estado = venta_libre`.
+- **"requiere receta — no consta en el listado MVL"** — `estado = no_consta`.
+- **"requiere receta — excede el tope de venta libre"** — `estado = excede_tope`.

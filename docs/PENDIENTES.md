@@ -161,6 +161,26 @@ guardan (comparación directa, no inferencia); asimetría de seguridad — "no c
 el listado → sin determinar → se trata como que exige receta, con aviso a verificar".
 **No bloquea** por ahora, pero debe re-verificarse antes de dar por cerrada la Tanda 3.
 
+### ⏳ Enlazar el listado MVL al catálogo de principios (Camino A) — encender el match
+
+La migración `0018` cargó las 207 en `medicamento_venta_libre`, pero el match
+producto↔listado usa **firma por IDs de `principio_activo`** (Camino A) y esos IDs
+**no existen todavía** (el catálogo grande es el semilla DIGEMAPS, en pausa). Estado:
+
+- **207 entradas cargadas, 0 enlazadas** (todas con `firma_composicion` = null).
+- Mientras estén sin enlazar, `app.estado_venta_libre()` devuelve **"no consta
+  (catalogo_incompleto)"** para todo → lado seguro (todo exige receta + verificar).
+- **22 son ambiguas** (`ambigua=true`: alternativas "X o Y", "COMBINADO CON:",
+  sinónimos entre paréntesis como "(PARACETAMOL)"). Esas **no se auto-enlazan**: se
+  resuelven a mano y siguen tratándose como "no consta" (`entrada_ambigua`) hasta
+  que alguien las desambigüe. Visibles en la tabla para que Wilkins/su farmacéutico
+  las revisen.
+
+**Cuando llegue el catálogo de principios:** enlazar las **207** a sus IDs (poblar
+`firma_composicion`), resolver a mano las **22 ambiguas**, y con eso se enciende el
+match. Contadores de arranque: **207 sin enlazar · 22 ambiguas · 46 con tope
+estructurado · 14 con concentración ilegible (tope null)**.
+
 ---
 
 _Última actualización: 2026-08-01 (Tanda 3 · Pieza 4 · listado de venta libre 000009-17)._
