@@ -39,6 +39,7 @@ en producción; el único perfil vivo es el **Dueño** (cuenta real, ver §4).
 | Panel de equivalencia (0011) | 1 principio `PRUEBA Losartán ZZ`, 3 laboratorios (Genfar/Rowe/MK), 3 productos `PRUEBA Losartán 50 Genfar` / `50 Rowe` / `100 MK` + sus renglones | 2026-07-31 | Demostrar el panel: Rowe = equivalente real (otro lab), 100 MK = "casi coincide" (otra dosis). Latencia de la consulta única medida: **mediana 152 ms** (<500 ms) | **VIVOS para la revisión de Marien** — purgar al cerrar la Tanda 2 |
 | Borrado de catálogos (0012) | 2 usuarios `@wfarmacia-test.local` (cajero, farmacéutico), formas `PRUEBA 0012 …` / `PRUEBA Borrado Target` + 1 producto, y entradas `xy`/`test`/`123` intentadas (no creadas) | 2026-07-31 | Probar el borrado seguro: rechazo en vivo de cajero/farmacéutico por llamada directa (42501/RLS), bloqueo atómico de una forma en uso, borrado de los tres `new` con rastro de actor, y validación de entradas obvias | **BORRADO** 2026-07-31 (misma ventana) |
 | Equivalencia (0013) | 6 principios `PRUEBA EQV …` + 12 productos `PRUEBA EQV …` con sus renglones | 2026-07-31 | Re-correr las 8 pruebas de equivalencia contra prod tras tocar `producto` en la 0013 (nullable del override) | **BORRADO** 2026-07-31 (misma ventana) |
+| Tanda 3 / 0014 (inventario por lote) | 2 usuarios `@wfarmacia-test.local` (dueño/cajero), 5 principios `PRUEBA T3 …`, 9 productos `PRUEBA EQV …` + 3 `PRUEBA T3 …` con renglones, 2 formas / 2 vías `PRUEBA T3`, 1 `medicamento_oficial PRUEBA`, y para la inviolabilidad 1 producto `PRUEBA T3 Inviolabilidad` + 1 fila en cada libro (`movimiento_inventario`/`historial_costo`/`discrepancia_inventario`) | 2026-08-01 | Verificar la 0014 en vivo: objetos+RLS/FORCE (7 tablas), override 5 casos (bajar sin motivo→CHECK, cajero→rol, dueño+motivo→guarda+audit, subir sin fricción, herencia más restrictiva), inviolabilidad 6/6, idempotencia de `medicamento_oficial`, y las 8 de equivalencia (5 neg + 3 pos) tras tocar `producto` | **BORRADO** 2026-08-01 lo borrable. **QUEDAN a propósito** (referenciados por el `audit_log` inviolable / son libros inviolables): los **2 `auth.users`** de prueba (sin perfil → invisibles a la app), y de la inviolabilidad el producto (borrado en suave) + las **3 filas de libro** `PRUEBA T3` |
 
 **Verificación:** al cierre de la ventana, `producto` y `principio_activo` con
 prefijo `PRUEBA` = **0** — **salvo** los 3 productos `PRUEBA Losartán …` del
@@ -69,6 +70,7 @@ se marca el corte en vez de limpiarlo.
 | **820 – 832** | Verificación de 0011 (panel de equivalencia): altas del principio, 3 laboratorios y 3 productos `PRUEBA` del panel (aún vivos para la revisión) | Prueba |
 | **833 – 866** | Verificación de 0012 (borrado de catálogos): borrado de los tres `new` (actor = Dueño), rechazos de cajero/farmacéutico, bloqueo por uso, y altas/borrados de artefactos `PRUEBA` del borrado | Prueba (incluye los DELETE reales de los tres `new`) |
 | **867 – 968** | Aplicación de 0013 (Adenda IV) y su verificación: el **semilla clínico real** (7 familias + 10 clases + 5 categorías, INSERT que permanece) y los `PRUEBA EQV` de la equivalencia (creados y borrados) | Mixto: el semilla es **real**; los `PRUEBA EQV` son prueba |
+| **969 – 1095** | Aplicación de 0014 (Tanda 3) y su verificación: recálculo de `completitud` de los productos existentes (updates que permanecen) + todos los artefactos `PRUEBA T3/EQV` (creados y borrados) + el actor del caso 4 del override + la inviolabilidad | Prueba (los updates de `completitud` sobre productos reales permanecen) |
 
 | Dato | Valor |
 |---|---|
@@ -76,7 +78,8 @@ se marca el corte en vez de limpiarlo.
 | **Última entrada al verificar 0010** | id **819** · **2026-07-31** |
 | **Última entrada al verificar 0011** | id **832** · **2026-07-31** |
 | **Última entrada al verificar 0012** | id **866** · **2026-07-31** |
-| **Última entrada al aplicar/verificar 0013 (CORTE ACTUAL)** | id **968** · **2026-07-31** (incluye el semilla clínico real, que permanece) |
+| **Última entrada al aplicar/verificar 0013** | id **968** · **2026-07-31** (incluye el semilla clínico real, que permanece) |
+| **Última entrada al aplicar/verificar 0014 (CORTE ACTUAL)** | id **1095** · **2026-08-01** (Tanda 3: recálculo de `completitud` real + artefactos `PRUEBA` de la verificación) |
 
 **Interpretación:** el `audit_log` es inviolable, así que las entradas de prueba
 permanecen. **La historia operativa real de Wilkins empieza después de la

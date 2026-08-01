@@ -40,10 +40,21 @@ existan productos que puedan bajarlo.
 >   los principios (`app.molecula_candado`).
 > - El actor y la fecha quedan en `audit_log` (trigger de auditoría de producto).
 >
-> Probado en Postgres local: bajar sin motivo → CHECK; cajero baja → rol lo
-> niega; Dueño con motivo → guarda; subir sin fricción; herencia multi-principio.
-> **Sigue bloqueando el cierre** hasta cablear la capa de app (pantalla de
-> edición que pide el motivo) y re-verificar en vivo con el PAT.
+> **Verificado EN PROD (2026-08-01, ventana de PAT de la Tanda 3):** bajar sin
+> motivo → rechazado (`check_violation`); cajero baja → rol lo niega; Dueño con
+> motivo → guarda y queda en `audit_log`; subir sin fricción; herencia
+> multi-principio toma lo más restrictivo. El motivo+rol se exige **solo al bajar
+> un candado que la molécula trae puesto** (no un CHECK ciego: el formulario
+> escribe `es_controlado=false` por defecto y un CHECK lo rechazaría).
+>
+> **Sigue bloqueando el cierre** por la capa de app:
+> 1. La pantalla de edición debe pedir el motivo al bajar el candado (hoy la base
+>    lo exige, pero la UI aún no lo ofrece).
+> 2. **El formulario escribe `false` por defecto (modelo de dos estados).** Antes
+>    de que existan moléculas controladas (semilla DIGEMAPS, Pieza 4), el alta
+>    debe pasar a escribir **`null` (heredar)** y migrarse los `false` legados a
+>    `null` — si no, un producto con molécula controlada se queda en `false` (no
+>    controlado) **sin** motivo ni aprobación, saltándose el candado en silencio.
 
 ---
 
@@ -90,9 +101,11 @@ medicamento oficial no es un producto de Wilkins hasta que él lo agregue.
 - Un producto **puede** crearse fuera del registro (`producto.fuera_de_registro`):
   es información que el Dueño quiere, no un error.
 
-**Estado (`0014`):** el esquema (unicidad + marca `fuera_de_registro`) quedó
-listo y probado en local. **BLOQUEA el cierre de la Tanda 3** hasta la carga del
-semilla (Pieza 4) y el buscador que la consume.
+**Estado (`0014`, verificado EN PROD 2026-08-01):** el esquema (unicidad por
+`registro_sanitario` + `clave_semilla` + marca `fuera_de_registro`) quedó listo;
+en prod se reinsertó el mismo `registro_sanitario` y quedó **una** fila.
+**BLOQUEA el cierre de la Tanda 3** hasta la carga del semilla grande (Pieza 4,
+`on conflict (registro_sanitario)`) y el buscador que la consume.
 
 ---
 

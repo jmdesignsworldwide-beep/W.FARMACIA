@@ -73,16 +73,14 @@ comment on column public.producto.fuera_de_registro is 'El Dueño reconoce que e
 -- El motivo es un hecho de negocio y vive en producto; el actor y la fecha ya
 -- quedan en audit_log (trigger trg_producto_audit). Aquí se ARMA la asimetría.
 
--- Integridad dura, siempre: marcar a mano un candado en false EXIGE su motivo.
--- (No depende del rol ni de la molécula: un false sin motivo no se guarda nunca.)
+-- NO se usa un CHECK "false exige motivo": el formulario actual escribe
+-- es_controlado=false por defecto (modelo de dos estados heredado), así que un
+-- CHECK ciego rechazaría los productos ya cargados y las altas nuevas. La regla
+-- correcta (Adenda IV §1 / PENDIENTES) es más fina — motivo y rol se exigen SOLO
+-- al BAJAR un candado que la molécula trae puesto — y vive en el trigger de abajo.
+-- (Los drops quedan por si una versión anterior llegó a crear los constraints.)
 alter table public.producto drop constraint if exists chk_motivo_control;
-alter table public.producto add constraint chk_motivo_control
-  check (es_controlado is distinct from false
-         or (motivo_control is not null and length(btrim(motivo_control)) > 0));
 alter table public.producto drop constraint if exists chk_motivo_receta;
-alter table public.producto add constraint chk_motivo_receta
-  check (requiere_receta is distinct from false
-         or (motivo_receta is not null and length(btrim(motivo_receta)) > 0));
 
 -- ¿Alguno de los principios del producto trae el candado puesto en la molécula?
 create or replace function app.molecula_candado(p_producto uuid)
@@ -121,17 +119,28 @@ begin
 
   select * into v_mol from app.molecula_candado(new.id);
 
-  -- Bajar un candado que la molécula trae puesto = solo Dueño/Administrador.
-  -- (El motivo ya lo garantizan los CHECK de arriba; aquí va el rol.)
-  if v_baja_controlado and coalesce(v_mol.controlado, false)
-     and not app.has_role('dueno','administrador') then
-    raise exception 'Bajar el candado de CONTROLADO (la molécula lo trae puesto) solo lo hace el Dueño o el Administrador, con motivo. Queda en la bitácora.'
-      using errcode = 'insufficient_privilege';
+  -- Bajar un candado que la molécula TRAE PUESTO exige motivo + Dueño/Admin.
+  -- Si la molécula no lo trae, poner false es inofensivo (= "no controlado"):
+  -- sin fricción. Así el formulario actual (que escribe false) sigue funcionando.
+  if v_baja_controlado and coalesce(v_mol.controlado, false) then
+    if new.motivo_control is null or length(btrim(new.motivo_control)) = 0 then
+      raise exception 'Bajar el candado de CONTROLADO (la molécula lo trae puesto) exige un motivo.'
+        using errcode = 'check_violation';
+    end if;
+    if not app.has_role('dueno','administrador') then
+      raise exception 'Bajar el candado de CONTROLADO solo lo hace el Dueño o el Administrador. Queda en la bitácora.'
+        using errcode = 'insufficient_privilege';
+    end if;
   end if;
-  if v_baja_receta and coalesce(v_mol.requiere_receta, false)
-     and not app.has_role('dueno','administrador') then
-    raise exception 'Bajar el candado de RECETA (la molécula lo exige) solo lo hace el Dueño o el Administrador, con motivo. Queda en la bitácora.'
-      using errcode = 'insufficient_privilege';
+  if v_baja_receta and coalesce(v_mol.requiere_receta, false) then
+    if new.motivo_receta is null or length(btrim(new.motivo_receta)) = 0 then
+      raise exception 'Bajar el candado de RECETA (la molécula lo exige) exige un motivo.'
+        using errcode = 'check_violation';
+    end if;
+    if not app.has_role('dueno','administrador') then
+      raise exception 'Bajar el candado de RECETA solo lo hace el Dueño o el Administrador. Queda en la bitácora.'
+        using errcode = 'insufficient_privilege';
+    end if;
   end if;
 
   return new;
@@ -460,6 +469,19 @@ create policy medoficial_admin_update on public.medicamento_oficial for update t
 drop policy if exists medoficial_admin_delete on public.medicamento_oficial;
 create policy medoficial_admin_delete on public.medicamento_oficial for delete to authenticated
   using ((select app.has_role('dueno','administrador')));
+
+-- Índices de llaves foráneas (Performance Advisor: unindexed_foreign_keys).
+-- Las FK sin índice cuestan en joins y en el borrado de la tabla referida.
+create index if not exists idx_mov_sucursal            on public.movimiento_inventario (sucursal_id);
+create index if not exists idx_mov_empleado            on public.movimiento_inventario (empleado_id);
+create index if not exists idx_histcosto_lote          on public.historial_costo (lote_id);
+create index if not exists idx_conteo_sucursal         on public.conteo_ciclico (sucursal_id);
+create index if not exists idx_conteo_empleado         on public.conteo_ciclico (empleado_id);
+create index if not exists idx_conteo_linea_lote       on public.conteo_ciclico_linea (lote_id);
+create index if not exists idx_discrepancia_lote       on public.discrepancia_inventario (lote_id);
+create index if not exists idx_discrepancia_conteo     on public.discrepancia_inventario (conteo_id);
+create index if not exists idx_discrepancia_empleado   on public.discrepancia_inventario (empleado_id);
+create index if not exists idx_producto_verificado_por on public.producto (verificado_por);
 
 -- Recalcula la completitud de los productos ya existentes (el default era 0).
 update public.producto set updated_at = now();
