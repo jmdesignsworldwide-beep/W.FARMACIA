@@ -142,4 +142,45 @@ en prod se reinsertó el mismo `registro_sanitario` y quedó **una** fila.
 
 ---
 
-_Última actualización: 2026-08-01 (Tanda 3 · Pieza 1 · migración 0014)._
+## Tanda 3 — Listado de Venta Libre (MVL): verificar versión posterior de la resolución
+
+**Origen:** base regulatoria de `requiere_receta` (Adenda IV · punto 5 de Marien). Se
+usa la **Resolución No. 000009 del MISPAS/DIGEMAPS, 26 JUN 2017** (207 principios de
+venta libre). Transcrita a `docs/venta-libre/mvl_res_000009-17.csv` (207 filas, 14
+celdas de concentración tachadas en el origen, marcadas ILEGIBLE).
+
+**Pendiente (lo busca Marien):** confirmar si existe una **versión más reciente** de
+la resolución. La DIGEMAPS estuvo recibiendo solicitudes de inclusión **hasta 2025**.
+Hasta que aparezca una posterior, la **000009-17 es la base vigente**. La fuente y la
+fecha se guardan en el sistema para saber sobre qué base se estaba operando cuando
+salga una nueva.
+
+**Regla fijada (2026-08-01):** carga literal de las 207; la regla de derivados de la
+nota de cierre queda **documentada, no automatizada**; los topes de concentración se
+guardan (comparación directa, no inferencia); asimetría de seguridad — "no consta en
+el listado → sin determinar → se trata como que exige receta, con aviso a verificar".
+**No bloquea** por ahora, pero debe re-verificarse antes de dar por cerrada la Tanda 3.
+
+### ⏳ Enlazar el listado MVL al catálogo de principios (Camino A) — encender el match
+
+La migración `0018` cargó las 207 en `medicamento_venta_libre`, pero el match
+producto↔listado usa **firma por IDs de `principio_activo`** (Camino A) y esos IDs
+**no existen todavía** (el catálogo grande es el semilla DIGEMAPS, en pausa). Estado:
+
+- **207 entradas cargadas, 0 enlazadas** (todas con `firma_composicion` = null).
+- Mientras estén sin enlazar, `app.estado_venta_libre()` devuelve **"no consta
+  (catalogo_incompleto)"** para todo → lado seguro (todo exige receta + verificar).
+- **22 son ambiguas** (`ambigua=true`: alternativas "X o Y", "COMBINADO CON:",
+  sinónimos entre paréntesis como "(PARACETAMOL)"). Esas **no se auto-enlazan**: se
+  resuelven a mano y siguen tratándose como "no consta" (`entrada_ambigua`) hasta
+  que alguien las desambigüe. Visibles en la tabla para que Wilkins/su farmacéutico
+  las revisen.
+
+**Cuando llegue el catálogo de principios:** enlazar las **207** a sus IDs (poblar
+`firma_composicion`), resolver a mano las **22 ambiguas**, y con eso se enciende el
+match. Contadores de arranque: **207 sin enlazar · 22 ambiguas · 46 con tope
+estructurado · 14 con concentración ilegible (tope null)**.
+
+---
+
+_Última actualización: 2026-08-01 (Tanda 3 · Pieza 4 · listado de venta libre 000009-17)._

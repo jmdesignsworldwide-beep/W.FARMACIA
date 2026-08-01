@@ -74,6 +74,7 @@ se marca el corte en vez de limpiarlo.
 | **1096 – 1101** | Aplicación de 0015 (Tanda 3 · Pieza 3) y su verificación: el modelo de deshacer (1 `importacion` + 2 productos `PRUEBA T3P3` creados y revertidos en suave) | Prueba |
 | **1102 – 1113** | Aplicación de 0016 (concentración por confirmar + `inferido`) y su verificación: enlace clínico inferido sin dosis (principio + producto `PRUEBA T3` creados y borrados) | Prueba |
 | **1120 – 1135** | Aplicación de 0017 (gate del override): migración de los 3 productos del panel de `false` sin motivo a `null` (**real**, permanece) + test de herencia en vivo (molécula controlada + producto null → hereda, `PRUEBA T3` creados y borrados) | Mixto: la migración es **real**; el test de herencia es prueba |
+| **1136 – 1342** | Aplicación de 0018 (Tanda 3 · Pieza 4): semilla del **listado de venta libre real** (207 filas de la Res. 000009-17, INSERT que permanece) | **Real** (dato oficial, permanece) |
 
 | Dato | Valor |
 |---|---|
@@ -85,7 +86,8 @@ se marca el corte en vez de limpiarlo.
 | **Última entrada al aplicar/verificar 0014** | id **1095** · **2026-08-01** (Tanda 3 · Pieza 1) |
 | **Última entrada al aplicar/verificar 0015** | id **1101** · **2026-08-01** (Tanda 3 · Pieza 3: modelo de deshacer de importación) |
 | **Última entrada al aplicar/verificar 0016** | id **1113** · **2026-08-01** (Tanda 3 · Pieza 3: concentración por confirmar + `inferido`) |
-| **Última entrada al aplicar/verificar 0017 (CORTE ACTUAL)** | id **1135** · **2026-08-01** (gate del override: `false` legado → `null`) |
+| **Última entrada al aplicar/verificar 0017** | id **1135** · **2026-08-01** (gate del override: `false` legado → `null`) |
+| **Última entrada al aplicar/verificar 0018 (CORTE ACTUAL)** | id **1342** · **2026-08-01** (Tanda 3 · Pieza 4: semilla real del listado de venta libre, 207 filas) |
 
 **Interpretación:** el `audit_log` es inviolable, así que las entradas de prueba
 permanecen. **La historia operativa real de Wilkins empieza después de la
@@ -129,4 +131,4 @@ Cada tanda que genere entradas de prueba actualiza este corte.
 
 ---
 
-_Última actualización: 2026-08-01 (Tanda 3 · Pieza 1 · 0014 — inventario por lote: corte 969–1095 y residuo inviolable)._
+_Última actualización: 2026-08-01 (Tanda 3 · Pieza 4 · 0018 — listado de venta libre: corte 1136–1342, semilla real de 207 filas)._
