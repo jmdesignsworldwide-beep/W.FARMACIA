@@ -71,6 +71,24 @@ un cajero, sin receta y fuera del libro.
 
 **⛔ BLOQUEA LA PIEZA 4.** (Independiente de la Pieza 2, que puede seguir.)
 
+> **Estado (2026-08-01):**
+> - **(1) HECHO** — el alta escribe `null` (heredar), no `false`
+>   (`camposProducto`: marcar = `true`, sin marcar = `null`).
+> - **(2) LISTO, falta PAT** — migración `0017` convierte los `false` legados
+>   (sin motivo) a `null`; los `false` **con motivo** (override deliberado) se
+>   respetan. Probado en local (legacy→null, override se queda; idempotente).
+> - **(2) APLICADO EN PROD (2026-08-01)** — ventana de PAT: los 3 productos del
+>   panel (`false` sin motivo) pasaron a `null`; 0 `false` con motivo tocados;
+>   herencia en vivo probada (producto null + molécula controlada → hereda).
+> - **(3) y (4) HECHO** — el candado en el formulario es de **tres estados**
+>   (Heredar / Sí / No) con **procedencia** visible (heredado de X / manual /
+>   sobrescrito por quién, con motivo). Bajar un candado heredado exige **motivo**
+>   y **solo Dueño/Admin** (la UI lo pide y lo deshabilita; el trigger de la base
+>   lo enforce). La molécula del principio elegido calcula la herencia en vivo.
+>
+> **✅ GATE CERRADO.** El semilla DIGEMAPS (Pieza 4) queda desbloqueado en cuanto
+> se mergee esta pieza (PR con la 0017 + el formulario de tres estados).
+
 ---
 
 ## Tanda 3 — Idempotencia del semilla grande (DIGEMAPS) contra identidad estable

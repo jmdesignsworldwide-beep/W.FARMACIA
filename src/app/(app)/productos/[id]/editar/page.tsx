@@ -22,8 +22,10 @@ interface ProductoDB {
   precio_venta: number | null;
   precio_caja: number | null;
   margen_objetivo: number | null;
-  es_controlado: boolean;
-  requiere_receta: boolean;
+  es_controlado: boolean | null;
+  requiere_receta: boolean | null;
+  motivo_control: string | null;
+  motivo_receta: string | null;
   exento_itbis: boolean;
   codigo_barras: string | null;
   registro_sanitario: string | null;
@@ -41,8 +43,36 @@ interface ProductoDB {
 
 const s = (v: number | string | null | undefined) => (v === null || v === undefined ? '' : String(v));
 
+async function overrideActor(
+  supabase: ReturnType<typeof createClient>,
+  productoId: string,
+  campo: 'motivo_control' | 'motivo_receta',
+): Promise<string | null> {
+  // Quién bajó el candado, del audit_log (solo Dueño/Admin lo lee por RLS; para
+  // otros roles queda null y se muestra "sobrescrito" sin el nombre).
+  const { data } = await supabase
+    .from('audit_log')
+    .select('actor_id, datos, ocurrido_en')
+    .eq('tabla', 'producto')
+    .eq('registro_id', productoId)
+    .eq('operacion', 'UPDATE')
+    .order('ocurrido_en', { ascending: false })
+    .limit(30);
+  const entry = (data as { actor_id: string | null; datos: Record<string, unknown> }[] | null)?.find(
+    (e) => e.datos?.[campo],
+  );
+  if (!entry?.actor_id) return null;
+  const { data: prof } = await supabase
+    .from('profiles')
+    .select('nombre')
+    .eq('id', entry.actor_id)
+    .maybeSingle<{ nombre: string }>();
+  return prof?.nombre ?? null;
+}
+
 export default async function EditarProductoPage({ params }: { params: { id: string } }) {
-  await requireCapability('gestionar_inventario');
+  const user = await requireCapability('gestionar_inventario');
+  const puedeBajar = user.role === 'dueno' || user.role === 'administrador';
   const supabase = createClient();
 
   const [prodRes, pa, ff, va, lab, pre] = await Promise.all([
@@ -51,7 +81,7 @@ export default async function EditarProductoPage({ params }: { params: { id: str
       .select(
         `id, nombre, forma_farmaceutica_id, via_administracion_id, unidad_base, unidad_caja,
          factor_caja, precio_venta, precio_caja, margen_objetivo, es_controlado, requiere_receta,
-         exento_itbis, codigo_barras, registro_sanitario,
+         motivo_control, motivo_receta, exento_itbis, codigo_barras, registro_sanitario,
          laboratorio:laboratorio_id ( nombre ),
          presentacion:presentacion_id ( nombre ),
          producto_principio_activo ( orden, principio_activo_id, concentracion_valor,
@@ -60,7 +90,7 @@ export default async function EditarProductoPage({ params }: { params: { id: str
       .eq('id', params.id)
       .is('eliminado_en', null)
       .maybeSingle(),
-    supabase.from('principio_activo').select('id, nombre').eq('activo', true).order('nombre'),
+    supabase.from('principio_activo').select('id, nombre, es_controlado, requiere_receta').eq('activo', true).order('nombre'),
     supabase.from('forma_farmaceutica').select('id, nombre').eq('activo', true).order('nombre'),
     supabase.from('via_administracion').select('id, nombre').eq('activo', true).order('nombre'),
     supabase.from('laboratorio').select('nombre').eq('activo', true).order('nombre'),
@@ -69,6 +99,9 @@ export default async function EditarProductoPage({ params }: { params: { id: str
 
   const p = prodRes.data as unknown as ProductoDB | null;
   if (!p) notFound();
+
+  const sobrescritoControlPor = p.es_controlado === false ? await overrideActor(supabase, p.id, 'motivo_control') : null;
+  const sobrescritoRecetaPor = p.requiere_receta === false ? await overrideActor(supabase, p.id, 'motivo_receta') : null;
 
   const principios: RenglonPrincipio[] = [...p.producto_principio_activo]
     .sort((a, b) => a.orden - b.orden)
@@ -95,6 +128,8 @@ export default async function EditarProductoPage({ params }: { params: { id: str
     margen_objetivo: s(p.margen_objetivo),
     es_controlado: p.es_controlado,
     requiere_receta: p.requiere_receta,
+    motivo_control: p.motivo_control ?? '',
+    motivo_receta: p.motivo_receta ?? '',
     exento_itbis: p.exento_itbis,
     codigo_barras: p.codigo_barras ?? '',
     registro_sanitario: p.registro_sanitario ?? '',
@@ -109,6 +144,9 @@ export default async function EditarProductoPage({ params }: { params: { id: str
       vias={(va.data as unknown as OpcionCatalogo[]) ?? []}
       laboratorios={((lab.data as unknown as { nombre: string }[]) ?? []).map((x) => x.nombre)}
       presentaciones={((pre.data as unknown as { nombre: string }[]) ?? []).map((x) => x.nombre)}
+      puedeBajarCandado={puedeBajar}
+      sobrescritoControlPor={sobrescritoControlPor}
+      sobrescritoRecetaPor={sobrescritoRecetaPor}
     />
   );
 }

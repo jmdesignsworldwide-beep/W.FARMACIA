@@ -118,8 +118,14 @@ const camposProducto = (payload: ProductoPayload, laboratorioId: string | null, 
   precio_venta: num(payload.precio_venta),
   precio_caja: num(payload.precio_caja),
   margen_objetivo: num(payload.margen_objetivo),
-  es_controlado: Boolean(payload.es_controlado),
-  requiere_receta: Boolean(payload.requiere_receta),
+  // Tres estados (Adenda IV §1): null=hereda · true=controlado · false=sobrescrito.
+  // El formulario ya envía el estado correcto; bajar el candado (false sobre una
+  // molécula que lo trae puesto) exige motivo + Dueño/Admin, y lo enforce el
+  // trigger de la base (app.enforce_override_candado). El motivo solo va con false.
+  es_controlado: payload.es_controlado,
+  requiere_receta: payload.requiere_receta,
+  motivo_control: payload.es_controlado === false ? payload.motivo_control?.trim() || null : null,
+  motivo_receta: payload.requiere_receta === false ? payload.motivo_receta?.trim() || null : null,
   exento_itbis: Boolean(payload.exento_itbis),
   codigo_barras: payload.codigo_barras?.trim() || null,
   registro_sanitario: payload.registro_sanitario?.trim() || null,
@@ -259,7 +265,7 @@ export async function actualizarProducto(
         'nombre', 'forma_farmaceutica_id', 'via_administracion_id', 'laboratorio_id',
         'presentacion_id', 'unidad_base', 'unidad_caja', 'factor_caja', 'precio_venta',
         'precio_caja', 'margen_objetivo', 'es_controlado', 'requiere_receta', 'exento_itbis',
-        'codigo_barras', 'registro_sanitario',
+        'codigo_barras', 'registro_sanitario', 'motivo_control', 'motivo_receta',
       ] as const;
       const revert = Object.fromEntries(MUTABLES.map((k) => [k, previo[k] ?? null]));
       await supabase.from('producto').update(revert as never).eq('id', productoId);
