@@ -68,5 +68,27 @@
   dominicanos, dos entidades, servidor por lotes con progreso, deshacer, reporte).
   Lleva preview para revisión con las manos.
 
+## Fixture feo a propósito — se construye contra basura, no contra un ideal
+
+`docs/fixtures/inventario-sucio-ejemplo.xlsx` (y `.csv` con `;`), generado por
+`generar_fixture.py`. Si el importador lo sobrevive, sobrevive el de Wilkins.
+Cada suciedad está puesta para reventar algo:
+
+| Suciedad en el archivo | Qué prueba |
+|---|---|
+| Título en **celda combinada** (`A1:H1`) + filas vacías arriba | Encontrar la fila de encabezado real, no la primera |
+| **Encabezado repetido** a media hoja | Saltarlo como basura, no importarlo como producto |
+| **Filas de totales** en el medio (`TOTAL PASILLO 1`, `TOTAL GENERAL`, combinadas) | Detectar y saltar subtotales |
+| **`RD$ 51.00`**, `RD$ 1,250.50`, `RD$ 320,00` | Quitar el símbolo y el formato de miles |
+| **`1.250,50` y `1,250.50` en el mismo archivo** | Número dominicano ambiguo → **avisar**, no adivinar |
+| `Vence`: `15/03/2027`, `03/04/2027` (ambigua), `01-12-2026`, y una **fecha real de Excel** (serial en `F5`) | DD/MM vs MM/DD → **preguntar una vez**; parsear serial |
+| `  Losartán 50 mg  ` con **espacios de más** | Normalizar antes de emparejar |
+| **`Losartán 50 mg` dos veces con lotes distintos** (`L-2201`, `L-2202`) | Crear el producto una vez, agregarle **ambos lotes** |
+| `Omeprazol` **solo catálogo** (sin cantidad/lote) | Entra como producto sin lote (incompleto, no error) |
+| Filas **incompletas** (sin costo, sin lote) y **basura** (`xxx`) | Aceptar lo incompleto; descartar lo basura |
+
+Marien probará además con **su propio archivo roto a propósito** cuando el
+importador esté listo.
+
 _El `false → null` del override NO va aquí: va en la ventana del override
 (`docs/PENDIENTES.md`), que bloquea la Pieza 4._
