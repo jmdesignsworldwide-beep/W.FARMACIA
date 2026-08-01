@@ -73,6 +73,7 @@ se marca el corte en vez de limpiarlo.
 | **969 – 1095** | Aplicación de 0014 (Tanda 3) y su verificación: recálculo de `completitud` de los productos existentes (updates que permanecen) + todos los artefactos `PRUEBA T3/EQV` (creados y borrados) + el actor del caso 4 del override + la inviolabilidad | Prueba (los updates de `completitud` sobre productos reales permanecen) |
 | **1096 – 1101** | Aplicación de 0015 (Tanda 3 · Pieza 3) y su verificación: el modelo de deshacer (1 `importacion` + 2 productos `PRUEBA T3P3` creados y revertidos en suave) | Prueba |
 | **1102 – 1113** | Aplicación de 0016 (concentración por confirmar + `inferido`) y su verificación: enlace clínico inferido sin dosis (principio + producto `PRUEBA T3` creados y borrados) | Prueba |
+| **1120 – 1135** | Aplicación de 0017 (gate del override): migración de los 3 productos del panel de `false` sin motivo a `null` (**real**, permanece) + test de herencia en vivo (molécula controlada + producto null → hereda, `PRUEBA T3` creados y borrados) | Mixto: la migración es **real**; el test de herencia es prueba |
 
 | Dato | Valor |
 |---|---|
@@ -83,7 +84,8 @@ se marca el corte en vez de limpiarlo.
 | **Última entrada al aplicar/verificar 0013** | id **968** · **2026-07-31** (incluye el semilla clínico real, que permanece) |
 | **Última entrada al aplicar/verificar 0014** | id **1095** · **2026-08-01** (Tanda 3 · Pieza 1) |
 | **Última entrada al aplicar/verificar 0015** | id **1101** · **2026-08-01** (Tanda 3 · Pieza 3: modelo de deshacer de importación) |
-| **Última entrada al aplicar/verificar 0016 (CORTE ACTUAL)** | id **1113** · **2026-08-01** (Tanda 3 · Pieza 3: concentración por confirmar + `inferido`) |
+| **Última entrada al aplicar/verificar 0016** | id **1113** · **2026-08-01** (Tanda 3 · Pieza 3: concentración por confirmar + `inferido`) |
+| **Última entrada al aplicar/verificar 0017 (CORTE ACTUAL)** | id **1135** · **2026-08-01** (gate del override: `false` legado → `null`) |
 
 **Interpretación:** el `audit_log` es inviolable, así que las entradas de prueba
 permanecen. **La historia operativa real de Wilkins empieza después de la
