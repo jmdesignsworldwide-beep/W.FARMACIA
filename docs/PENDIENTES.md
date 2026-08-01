@@ -142,4 +142,25 @@ en prod se reinsertó el mismo `registro_sanitario` y quedó **una** fila.
 
 ---
 
-_Última actualización: 2026-08-01 (Tanda 3 · Pieza 1 · migración 0014)._
+## Tanda 3 — Listado de Venta Libre (MVL): verificar versión posterior de la resolución
+
+**Origen:** base regulatoria de `requiere_receta` (Adenda IV · punto 5 de Marien). Se
+usa la **Resolución No. 000009 del MISPAS/DIGEMAPS, 26 JUN 2017** (207 principios de
+venta libre). Transcrita a `docs/venta-libre/mvl_res_000009-17.csv` (207 filas, 14
+celdas de concentración tachadas en el origen, marcadas ILEGIBLE).
+
+**Pendiente (lo busca Marien):** confirmar si existe una **versión más reciente** de
+la resolución. La DIGEMAPS estuvo recibiendo solicitudes de inclusión **hasta 2025**.
+Hasta que aparezca una posterior, la **000009-17 es la base vigente**. La fuente y la
+fecha se guardan en el sistema para saber sobre qué base se estaba operando cuando
+salga una nueva.
+
+**Regla fijada (2026-08-01):** carga literal de las 207; la regla de derivados de la
+nota de cierre queda **documentada, no automatizada**; los topes de concentración se
+guardan (comparación directa, no inferencia); asimetría de seguridad — "no consta en
+el listado → sin determinar → se trata como que exige receta, con aviso a verificar".
+**No bloquea** por ahora, pero debe re-verificarse antes de dar por cerrada la Tanda 3.
+
+---
+
+_Última actualización: 2026-08-01 (Tanda 3 · Pieza 4 · listado de venta libre 000009-17)._
