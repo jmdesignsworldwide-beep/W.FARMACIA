@@ -8,10 +8,20 @@
  * similitud viven aquí; la escritura ocurre en actions.ts (servidor).
  */
 
-export type CatalogoTipo = 'principio_activo' | 'forma_farmaceutica' | 'via_administracion';
+export type CatalogoTipo =
+  | 'principio_activo'
+  | 'forma_farmaceutica'
+  | 'via_administracion'
+  | 'clase_terapeutica'
+  | 'familia_alergenica'
+  | 'categoria_comercial';
+
+/** Agrupación visual: la identidad clínica vs. la clasificación (Adenda IV). */
+export type CatalogoGrupo = 'clinico' | 'clasificacion';
 
 export interface CatalogoDef {
   tipo: CatalogoTipo;
+  grupo: CatalogoGrupo;
   titulo: string; // plural
   singular: string;
   icon: string; // lucide
@@ -22,6 +32,7 @@ export interface CatalogoDef {
 export const CATALOGOS: CatalogoDef[] = [
   {
     tipo: 'principio_activo',
+    grupo: 'clinico',
     titulo: 'Principios activos',
     singular: 'principio activo',
     icon: 'FlaskConical',
@@ -31,6 +42,7 @@ export const CATALOGOS: CatalogoDef[] = [
   },
   {
     tipo: 'forma_farmaceutica',
+    grupo: 'clinico',
     titulo: 'Formas farmacéuticas',
     singular: 'forma farmacéutica',
     icon: 'Pill',
@@ -39,12 +51,43 @@ export const CATALOGOS: CatalogoDef[] = [
   },
   {
     tipo: 'via_administracion',
+    grupo: 'clinico',
     titulo: 'Vías de administración',
     singular: 'vía de administración',
     icon: 'Waypoints',
     descripcion:
       'Oral, oftálmica, ótica… Campo aparte de la forma: unas gotas oftálmicas no son unas óticas.',
     placeholder: 'Ej. Oftálmica',
+  },
+  {
+    tipo: 'clase_terapeutica',
+    grupo: 'clasificacion',
+    titulo: 'Clases terapéuticas',
+    singular: 'clase terapéutica',
+    icon: 'Activity',
+    descripcion:
+      'Antihipertensivo, antibiótico, analgésico… Agrupa las moléculas para reportes y para el mostrador.',
+    placeholder: 'Ej. Antihipertensivo',
+  },
+  {
+    tipo: 'familia_alergenica',
+    grupo: 'clasificacion',
+    titulo: 'Familias alergénicas',
+    singular: 'familia alergénica',
+    icon: 'ShieldAlert',
+    descripcion:
+      'Penicilinas, sulfas, AINEs… La base de la alerta cruzada de alergia: la reacción es por familia, no por molécula.',
+    placeholder: 'Ej. Penicilinas',
+  },
+  {
+    tipo: 'categoria_comercial',
+    grupo: 'clasificacion',
+    titulo: 'Categorías comerciales',
+    singular: 'categoría comercial',
+    icon: 'Tags',
+    descripcion:
+      'Medicamento, cuidado personal, bebé, belleza… Una farmacia no vende solo medicinas.',
+    placeholder: 'Ej. Cuidado personal',
   },
 ];
 
