@@ -1,66 +1,111 @@
 import Link from 'next/link';
-import { Plus, Package, ShieldAlert, FileText, Pencil, Sparkles, GitCompareArrows } from 'lucide-react';
+import { Plus, Sparkles } from 'lucide-react';
 import { requireCapability } from '@/lib/auth';
+import { can } from '@/lib/roles';
 import { createClient } from '@/lib/supabase/server';
-import { LuminousCard } from '@/components/brand/LuminousCard';
-import { EmptyState } from '@/components/brand/EmptyState';
+import { normaliza } from '@/lib/catalogos';
 import { formatConcentracion } from '@/lib/producto';
+import { ProductosLista, type ProductoItem } from './ProductosLista';
 
 export const dynamic = 'force-dynamic';
 
 interface ProductoRow {
   id: string;
   nombre: string;
-  es_controlado: boolean;
-  requiere_receta: boolean;
-  forma_farmaceutica: { nombre: string } | null;
-  via_administracion: { nombre: string } | null;
+  es_controlado: boolean | null;
+  requiere_receta: boolean | null;
+  precio_venta: number | null;
+  completitud: number | null;
+  estado_verificacion: ProductoItem['estadoVerificacion'];
+  codigo_barras: string | null;
   laboratorio: { nombre: string } | null;
+  categoria: { nombre: string } | null;
   producto_principio_activo: Array<{
     orden: number;
     concentracion_valor: number;
     concentracion_unidad: string;
     concentracion_volumen_valor: number | null;
     concentracion_volumen_unidad: string | null;
-    principio_activo: { nombre: string } | null;
+    principio_activo: { nombre: string; es_controlado: boolean; requiere_receta: boolean } | null;
   }>;
+  lote: Array<{ cantidad_actual: number; fecha_vencimiento: string | null; estado: string }>;
 }
 
-export default async function ProductosPage({
-  searchParams,
-}: {
-  searchParams: { alt?: string };
-}) {
-  await requireCapability('gestionar_inventario');
+export default async function ProductosPage({ searchParams }: { searchParams: { alt?: string } }) {
+  const user = await requireCapability('gestionar_inventario');
+  const verFinanzas = can(user.role, 'ver_finanzas');
   const supabase = createClient();
 
   const { data } = await supabase
     .from('producto')
     .select(
-      `id, nombre, es_controlado, requiere_receta,
-       forma_farmaceutica:forma_farmaceutica_id ( nombre ),
-       via_administracion:via_administracion_id ( nombre ),
+      `id, nombre, es_controlado, requiere_receta, precio_venta, completitud, estado_verificacion, codigo_barras,
        laboratorio:laboratorio_id ( nombre ),
+       categoria:categoria_comercial_id ( nombre ),
        producto_principio_activo (
          orden, concentracion_valor, concentracion_unidad,
          concentracion_volumen_valor, concentracion_volumen_unidad,
-         principio_activo:principio_activo_id ( nombre )
-       )`,
+         principio_activo:principio_activo_id ( nombre, es_controlado, requiere_receta )
+       ),
+       lote ( cantidad_actual, fecha_vencimiento, estado )`,
     )
     .is('eliminado_en', null)
     .order('nombre');
 
-  const productos = (data as unknown as ProductoRow[]) ?? [];
+  const rows = (data as unknown as ProductoRow[]) ?? [];
+
+  const productos: ProductoItem[] = rows.map((p) => {
+    const pas = [...p.producto_principio_activo].sort((a, b) => a.orden - b.orden);
+    const principios = pas
+      .map((pp) =>
+        `${pp.principio_activo?.nombre ?? '—'} ${formatConcentracion(
+          pp.concentracion_valor,
+          pp.concentracion_unidad,
+          pp.concentracion_volumen_valor,
+          pp.concentracion_volumen_unidad,
+        )}`,
+      )
+      .join('  +  ');
+    // Candado EFECTIVO: el override del producto si se decidió (true/false), o la
+    // herencia de la molécula (lo más restrictivo de sus principios) si es null.
+    const molControlado = pas.some((pp) => pp.principio_activo?.es_controlado);
+    const molReceta = pas.some((pp) => pp.principio_activo?.requiere_receta);
+    const activos = (p.lote ?? []).filter((l) => l.estado === 'activo');
+    const existencia = activos.reduce((s, l) => s + Number(l.cantidad_actual ?? 0), 0);
+    const vencs = activos.map((l) => l.fecha_vencimiento).filter((f): f is string => Boolean(f)).sort();
+
+    return {
+      id: p.id,
+      nombre: p.nombre,
+      busqueda: normaliza(
+        [p.nombre, pas.map((pp) => pp.principio_activo?.nombre).filter(Boolean).join(' '), p.laboratorio?.nombre, p.codigo_barras]
+          .filter(Boolean)
+          .join(' '),
+      ),
+      principios,
+      laboratorio: p.laboratorio?.nombre ?? null,
+      categoria: p.categoria?.nombre ?? null,
+      controlado: p.es_controlado ?? molControlado,
+      receta: p.requiere_receta ?? molReceta,
+      completitud: p.completitud ?? 0,
+      incompleto: (p.completitud ?? 0) < 100,
+      estadoVerificacion: p.estado_verificacion ?? 'estimado',
+      existencia,
+      estimada: (p.estado_verificacion ?? 'estimado') !== 'verificado',
+      precio: p.precio_venta,
+      vencimientoIso: vencs[0] ?? null,
+    };
+  });
+
   const alt = searchParams.alt?.trim();
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
-      <header className="mb-6 flex items-start justify-between gap-4">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+      <header className="mb-5 flex items-start justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold text-ink">Productos</h1>
           <p className="mt-1 text-sm text-ink-soft">
-            El maestro de la farmacia. Cada producto lleva su identidad clínica: principios activos y
-            concentración.
+            El maestro de la farmacia. Busca al instante y filtra; pensado para miles.
           </p>
         </div>
         <Link
@@ -81,90 +126,7 @@ export default async function ProductosPage({
         </div>
       ) : null}
 
-      {productos.length === 0 ? (
-        <LuminousCard neutral>
-          <EmptyState
-            titulo="Aún no hay productos"
-            mensaje="Crea el primero. El catálogo se completa vendiendo: puedes cargar lo esencial ahora y enriquecerlo después."
-            icon={<Package size={30} />}
-            tone="accent"
-            cta={
-              <Link href="/productos/nuevo" className="inline-flex h-10 items-center gap-2 rounded-control brand-gradient px-4 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-95">
-                <Plus size={17} /> Crear el primer producto
-              </Link>
-            }
-          />
-        </LuminousCard>
-      ) : (
-        <ul className="space-y-3">
-          {productos.map((p) => {
-            const principios = [...p.producto_principio_activo].sort((a, b) => a.orden - b.orden);
-            return (
-              <li key={p.id}>
-                <LuminousCard neutral className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-display font-semibold text-ink">{p.nombre}</span>
-                      {p.laboratorio?.nombre ? (
-                        <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-ink-soft">
-                          {p.laboratorio.nombre}
-                        </span>
-                      ) : null}
-                      {p.es_controlado ? (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-danger/30 bg-danger/10 px-2 py-0.5 text-[11px] font-medium text-danger">
-                          <ShieldAlert size={12} /> Controlado
-                        </span>
-                      ) : null}
-                      {p.requiere_receta ? (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning">
-                          <FileText size={12} /> Receta
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-1 text-sm text-ink-soft">
-                      {principios.length > 0
-                        ? principios
-                            .map(
-                              (pp) =>
-                                `${pp.principio_activo?.nombre ?? '—'} ${formatConcentracion(
-                                  pp.concentracion_valor,
-                                  pp.concentracion_unidad,
-                                  pp.concentracion_volumen_valor,
-                                  pp.concentracion_volumen_unidad,
-                                )}`,
-                            )
-                            .join('  +  ')
-                        : 'Sin principios activos aún'}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <span className="text-xs text-ink-faint">
-                      {[p.forma_farmaceutica?.nombre, p.via_administracion?.nombre].filter(Boolean).join(' · ') ||
-                        'forma/vía pendiente'}
-                    </span>
-                    <Link
-                      href={`/productos/${p.id}/equivalencias`}
-                      aria-label={`Ver equivalentes de ${p.nombre}`}
-                      title="Equivalentes"
-                      className="flex h-9 w-9 items-center justify-center rounded-control text-ink-faint transition-colors hover:bg-surface-2 hover:text-accent"
-                    >
-                      <GitCompareArrows size={16} />
-                    </Link>
-                    <Link
-                      href={`/productos/${p.id}/editar`}
-                      aria-label={`Editar ${p.nombre}`}
-                      title="Editar"
-                      className="flex h-9 w-9 items-center justify-center rounded-control text-ink-faint transition-colors hover:bg-surface-2 hover:text-accent"
-                    >
-                      <Pencil size={16} />
-                    </Link>
-                  </div>
-                </LuminousCard>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <ProductosLista productos={productos} verFinanzas={verFinanzas} />
     </div>
   );
 }
