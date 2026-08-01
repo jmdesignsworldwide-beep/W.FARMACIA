@@ -90,5 +90,26 @@ Cada suciedad está puesta para reventar algo:
 Marien probará además con **su propio archivo roto a propósito** cuando el
 importador esté listo.
 
+## Estado de construcción (2026-08-01)
+
+- **Lectura de `.xlsx`: lector propio SIN dependencias** (`src/lib/importar/xlsx.ts`,
+  ZIP + OOXML con el `zlib` nativo). **SheetJS quedó descartado por el entorno:**
+  su CDN está bloqueado por la política de egress (403, no se rodea) y su versión
+  del registro npm arrastra CVEs; ExcelJS sumaba un vuln transitivo. Cero
+  dependencias = Fort Knox limpio. Está aislado: si se habilita el CDN de SheetJS,
+  se cambia solo `leerXlsx`. **Decisión abierta para Marien.**
+- **Probado contra el fixture feo** (xlsx y csv, resultado idéntico): encabezado
+  detectado bajo el título combinado, basura saltada (vacía, totales ×2,
+  encabezado repetido), números dominicanos resueltos, serial de Excel a fecha,
+  ambigüedad de número/fecha marcada, el mismo Losartán con sus dos lotes.
+- **Alcance v1:** carga **producto + lote**. El **principio activo** se muestra en
+  el preview pero **aún no se enlaza** al modelo clínico (`producto_principio_activo`
+  exige concentración NOT NULL): el producto entra **incompleto** y se enriquece
+  después (Adenda II §1). Enlazar principio+concentración desde el nombre es la
+  siguiente iteración.
+- **Servidor autoridad + progreso:** el navegador arma el preview (librería pura);
+  el servidor re-valida e inserta por lotes de 100, marcando `importacion_id`;
+  el cliente avanza la barra. Deshacer 24h contable-seguro incluido.
+
 _El `false → null` del override NO va aquí: va en la ventana del override
 (`docs/PENDIENTES.md`), que bloquea la Pieza 4._
