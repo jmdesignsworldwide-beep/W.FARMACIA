@@ -12,6 +12,7 @@ import {
   type ProductoPayload,
 } from '@/lib/producto';
 import type { UnidadConcentracion, UnidadVolumen } from '@/lib/supabase/types';
+import { procedenciaMvl, type ResultadoMvl } from '@/lib/ventaLibre';
 import { crearProducto, actualizarProducto } from '../actions';
 
 export interface OpcionCatalogo {
@@ -165,6 +166,7 @@ export function ProductoForm({
   puedeBajarCandado = false,
   sobrescritoControlPor = null,
   sobrescritoRecetaPor = null,
+  estadoMvl = null,
 }: {
   principiosCatalogo: OpcionCatalogo[];
   formas: OpcionCatalogo[];
@@ -175,6 +177,7 @@ export function ProductoForm({
   puedeBajarCandado?: boolean; // solo Dueño/Admin puede bajar un candado heredado
   sobrescritoControlPor?: string | null; // quién hizo el override (del audit_log)
   sobrescritoRecetaPor?: string | null;
+  estadoMvl?: ResultadoMvl | null; // procedencia frente al listado de venta libre (0018)
 }) {
   const router = useRouter();
   const esEdicion = Boolean(inicial);
@@ -404,6 +407,18 @@ export function ProductoForm({
           <Candado titulo="Requiere receta" valor={requiereReceta} onValor={setRequiereReceta}
             motivo={motivoReceta} onMotivo={setMotivoReceta} hereda={heredaReceta}
             moleculas={molsReceta} puedeBajar={puedeBajarCandado} sobrescritoPor={sobrescritoRecetaPor} />
+          {estadoMvl && (() => {
+            const p = procedenciaMvl(estadoMvl);
+            const tono = p.tono === 'ok'
+              ? 'border-emerald-500/40 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300'
+              : 'border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-300';
+            return (
+              <div className={`rounded-md border px-3 py-2 text-xs ${tono}`}>
+                <div className="font-medium">Listado de venta libre · {p.texto}</div>
+                <div className="mt-0.5 opacity-80">{p.detalle}</div>
+              </div>
+            );
+          })()}
           <label className="flex cursor-pointer items-center gap-2.5 text-sm text-ink">
             <input type="checkbox" checked={exentoItbis} onChange={(e) => setExentoItbis(e.target.checked)} className="h-4 w-4 rounded border-line accent-[hsl(var(--accent))]" />
             Exento de ITBIS

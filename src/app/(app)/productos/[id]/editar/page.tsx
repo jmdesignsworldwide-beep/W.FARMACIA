@@ -8,6 +8,7 @@ import {
   type RenglonPrincipio,
 } from '../../nuevo/ProductoForm';
 import type { UnidadConcentracion, UnidadVolumen } from '@/lib/supabase/types';
+import { estadoVentaLibre } from '@/lib/ventaLibre';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,6 +103,7 @@ export default async function EditarProductoPage({ params }: { params: { id: str
 
   const sobrescritoControlPor = p.es_controlado === false ? await overrideActor(supabase, p.id, 'motivo_control') : null;
   const sobrescritoRecetaPor = p.requiere_receta === false ? await overrideActor(supabase, p.id, 'motivo_receta') : null;
+  const estadoMvl = await estadoVentaLibre(supabase);
 
   const principios: RenglonPrincipio[] = [...p.producto_principio_activo]
     .sort((a, b) => a.orden - b.orden)
@@ -147,6 +149,7 @@ export default async function EditarProductoPage({ params }: { params: { id: str
       puedeBajarCandado={puedeBajar}
       sobrescritoControlPor={sobrescritoControlPor}
       sobrescritoRecetaPor={sobrescritoRecetaPor}
+      estadoMvl={estadoMvl}
     />
   );
 }
