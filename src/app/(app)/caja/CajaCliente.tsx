@@ -1,7 +1,7 @@
 'use client';
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { MapPin, Package, Pill, ScanLine, ShieldCheck, ShoppingCart, Trash2 } from 'lucide-react';
+import { ArrowLeftRight, MapPin, Package, Pill, ScanLine, ShieldCheck, ShoppingCart, Trash2 } from 'lucide-react';
 import { BRAND } from '@/lib/tokens';
 import { formatMoney, formatNumber } from '@/lib/format';
 import { normaliza } from '@/lib/catalogos';
@@ -16,6 +16,9 @@ export interface CatalogoItem {
   existencia: number;
   ubicacion: string | null;
   busqueda: string;
+  firmaMolecula: string;
+  firmaCompleta: string;
+  principios: string;
 }
 
 interface Linea {
@@ -63,6 +66,33 @@ export function CajaCliente({ catalogo }: { catalogo: CatalogoItem[] }) {
   useEffect(() => setSel(0), [q]);
 
   const destacado = resultados[sel] ?? null;
+
+  // Índice por firma de molécula: agrupar candidatos a equivalencia una sola vez.
+  const indice = useMemo(() => {
+    const m = new Map<string, CatalogoItem[]>();
+    for (const it of catalogo) {
+      if (!it.firmaMolecula) continue;
+      const arr = m.get(it.firmaMolecula);
+      if (arr) arr.push(it);
+      else m.set(it.firmaMolecula, [it]);
+    }
+    return m;
+  }, [catalogo]);
+
+  // Equivalencias del destacado: mismo principio y con existencia. Real = misma
+  // concentración; "casi coincide" = mismo principio, otra concentración/forma.
+  const equivalencias = useMemo(() => {
+    const reales: CatalogoItem[] = [];
+    const casi: CatalogoItem[] = [];
+    if (destacado?.firmaMolecula) {
+      for (const it of indice.get(destacado.firmaMolecula) ?? []) {
+        if (it.id === destacado.id || it.existencia <= 0) continue;
+        if (it.firmaCompleta === destacado.firmaCompleta) reales.push(it);
+        else casi.push(it);
+      }
+    }
+    return { reales, casi };
+  }, [destacado, indice]);
 
   const totales = useMemo(() => {
     let total = 0;
@@ -229,6 +259,7 @@ export function CajaCliente({ catalogo }: { catalogo: CatalogoItem[] }) {
               <div>
                 <div className="font-display text-lg font-semibold text-ink">{destacado.nombre}</div>
                 <div className="mt-0.5 text-2xl font-bold text-ink tabular-nums">{formatMoney(destacado.precio)}</div>
+                {destacado.principios && <div className="mt-1 text-xs text-ink-faint">{destacado.principios}</div>}
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Package className="h-4 w-4 text-ink-faint" />
@@ -252,6 +283,45 @@ export function CajaCliente({ catalogo }: { catalogo: CatalogoItem[] }) {
                     <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/5 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-300">
                       <Pill className="h-3 w-3" /> Requiere receta
                     </span>
+                  )}
+                </div>
+              )}
+
+              {(equivalencias.reales.length > 0 || equivalencias.casi.length > 0) && (
+                <div className="space-y-2 border-t border-line pt-3">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-ink-soft">
+                    <ArrowLeftRight className="h-3.5 w-3.5" />
+                    {destacado.existencia > 0 ? 'También sirve' : 'No hay, pero sí tienes'}
+                  </div>
+                  {equivalencias.reales.map((it) => (
+                    <button
+                      key={it.id}
+                      onClick={() => agregar(it)}
+                      className="flex w-full items-center justify-between gap-2 rounded-control border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-left hover:bg-emerald-500/10"
+                    >
+                      <span className="min-w-0 flex-1 truncate text-sm text-ink">{it.nombre}</span>
+                      <span className="text-xs text-ink-faint tabular-nums">{formatNumber(it.existencia)}</span>
+                      <span className="text-sm font-medium text-ink tabular-nums">{formatMoney(it.precio)}</span>
+                    </button>
+                  ))}
+                  {equivalencias.casi.length > 0 && (
+                    <>
+                      <div className="pt-1 text-xs text-amber-700 dark:text-amber-400">Casi coincide — verifica con el farmacéutico</div>
+                      {equivalencias.casi.map((it) => (
+                        <button
+                          key={it.id}
+                          onClick={() => agregar(it)}
+                          className="flex w-full items-center justify-between gap-2 rounded-control border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-left hover:bg-amber-500/10"
+                        >
+                          <span className="min-w-0 flex-1 truncate text-sm text-ink">
+                            {it.nombre}
+                            <span className="ml-1.5 text-xs text-ink-faint">{it.principios}</span>
+                          </span>
+                          <span className="text-xs text-ink-faint tabular-nums">{formatNumber(it.existencia)}</span>
+                          <span className="text-sm font-medium text-ink tabular-nums">{formatMoney(it.precio)}</span>
+                        </button>
+                      ))}
+                    </>
                   )}
                 </div>
               )}

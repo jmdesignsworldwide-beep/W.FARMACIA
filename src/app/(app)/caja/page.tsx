@@ -1,6 +1,7 @@
 import { requireCapability } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { normaliza } from '@/lib/catalogos';
+import { formatConcentracion } from '@/lib/producto';
 import { CajaCliente, type CatalogoItem } from './CajaCliente';
 
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,10 @@ interface Row {
   ubicacion_fisica_default: string | null;
   laboratorio: { nombre: string } | null;
   producto_principio_activo: Array<{
+    concentracion_valor: number | null;
+    concentracion_unidad: string | null;
+    concentracion_volumen_valor: number | null;
+    concentracion_volumen_unidad: string | null;
     principio_activo: { nombre: string; es_controlado: boolean | null; requiere_receta: boolean | null } | null;
   }>;
   lote: Array<{ cantidad_actual: number | null; estado: string; ubicacion_fisica: string | null; fecha_vencimiento: string | null }>;
@@ -32,7 +37,10 @@ export default async function CajaPage() {
       `id, nombre, precio_venta, exento_itbis, es_controlado, requiere_receta, codigo_barras,
        ubicacion_fisica_default,
        laboratorio:laboratorio_id ( nombre ),
-       producto_principio_activo ( principio_activo:principio_activo_id ( nombre, es_controlado, requiere_receta ) ),
+       producto_principio_activo (
+         concentracion_valor, concentracion_unidad, concentracion_volumen_valor, concentracion_volumen_unidad,
+         principio_activo:principio_activo_id ( nombre, es_controlado, requiere_receta )
+       ),
        lote ( cantidad_actual, estado, ubicacion_fisica, fecha_vencimiento )`,
     )
     .is('eliminado_en', null)
@@ -49,6 +57,23 @@ export default async function CajaPage() {
     const fefo = [...activos].sort((a, b) => (a.fecha_vencimiento ?? '9999').localeCompare(b.fecha_vencimiento ?? '9999'));
     const ubicacion = p.ubicacion_fisica_default ?? fefo[0]?.ubicacion_fisica ?? null;
 
+    // Firma de molécula para equivalencias. `firmaMolecula` = solo los principios
+    // (ordenados) → agrupa candidatos. `firmaCompleta` añade la concentración →
+    // separa el equivalente REAL del que solo "casi coincide".
+    const nombres = pas.map((x) => x.principio_activo?.nombre).filter((n): n is string => Boolean(n));
+    const conConc = pas
+      .filter((x) => x.principio_activo?.nombre)
+      .map((x) => {
+        const conc =
+          x.concentracion_valor != null && x.concentracion_unidad
+            ? formatConcentracion(x.concentracion_valor, x.concentracion_unidad, x.concentracion_volumen_valor, x.concentracion_volumen_unidad)
+            : '';
+        return `${x.principio_activo!.nombre} ${conc}`.trim();
+      });
+    const firmaMolecula = nombres.length ? normaliza([...nombres].sort().join('+')) : '';
+    const firmaCompleta = conConc.length ? normaliza([...conConc].sort().join('+')) : '';
+    const principios = conConc.join('  +  ');
+
     return {
       id: p.id,
       nombre: p.nombre,
@@ -58,6 +83,9 @@ export default async function CajaPage() {
       receta: p.requiere_receta ?? molReceta,
       existencia,
       ubicacion,
+      firmaMolecula,
+      firmaCompleta,
+      principios,
       busqueda: normaliza(
         [p.nombre, pas.map((x) => x.principio_activo?.nombre).filter(Boolean).join(' '), p.laboratorio?.nombre, p.codigo_barras]
           .filter(Boolean)
