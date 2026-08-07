@@ -7,6 +7,49 @@
 
 ---
 
+## 🔓 Tanda 3 — CERRADA (2026-08-01). Pendientes que quedan ABIERTOS
+
+La Tanda 3 se cerró con el visto de Marien. Estos hilos siguen abiertos y se
+retoman más adelante (ninguno bloquea la Tanda 4 · POS):
+
+1. **Semilla grande DIGEMAPS — esperando al MISPAS.** El registro sanitario completo
+   (`medicamento_oficial`) sigue en pausa: el servidor del MISPAS estaba caído. Se
+   carga cuando vuelva. (Detalle abajo: "Idempotencia del semilla grande".)
+2. **Enlazar las 207 del listado de venta libre al catálogo de principios** (Camino A):
+   hoy **0 enlazadas** → la función cae del lado seguro ("no consta"). Se enciende el
+   match al enlazar. (Detalle: sección del listado MVL.)
+3. **22 entradas ambiguas** del listado MVL: se resuelven a mano (no se auto-enlazan).
+4. **Verificar versión posterior de la Resolución 000009-17** (la busca Marien; la
+   DIGEMAPS recibió inclusiones hasta 2025).
+5. **Umbral de discrepancia configurable desde Ajustes** (ver sección propia abajo).
+6. **El importador (Pieza 3) sin probar con las manos de Marien** — ella prepararía un
+   archivo "feo a propósito" (totales en medio, encabezados repetidos, celdas
+   combinadas, símbolos de peso, dos formatos de fecha, espacios de más). Falta esa
+   prueba de fuego antes de darlo por bueno.
+
+**Vivo en producción tras la Tanda 3** (para saber qué tiene el sistema hoy): maestro
+de productos con override de tres estados; inventario por lote con libros inviolables;
+importador masivo con principio inferido; listado de venta libre (207, base regulatoria
+de receta); y el conteo cíclico con calibración de confianza.
+
+---
+
+## Tanda 3 — Umbral de discrepancia de conteo: configurable desde Ajustes
+
+**Origen:** decisión de Marien (2026-08-01, cierre de la Pieza 6). Hoy el umbral por
+encima del cual una corrección de conteo exige motivo + Dueño/Admin es una **constante**
+`UMBRAL_DISCREPANCIA_RD = 5000` (`src/lib/conteo.ts`).
+
+**La regla:** debe ser **configurable desde Ajustes**, no una constante — "una farmacia
+grande y una pequeña no tienen el mismo umbral, y este sistema se vende a muchas".
+
+**Qué falta:** una **tabla de configuración** (por cadena/sucursal), la pantalla de
+**Ajustes** para editarlo (solo Dueño/Admin), y que `confirmarCorreccion` lea de ahí
+con `5000` como valor por defecto. Requiere migración (tabla de config) → se junta con
+la ventana de PAT del esquema de la Tanda 4 para no abrir otra. **No bloquea** el POS.
+
+---
+
 ## Tanda 3 — Asimetría de seguridad del override de herencia
 
 **Origen:** Adenda IV §1 (herencia molécula → producto). El esquema quedó listo
@@ -183,4 +226,4 @@ estructurado · 14 con concentración ilegible (tope null)**.
 
 ---
 
-_Última actualización: 2026-08-01 (Tanda 3 · Pieza 4 · listado de venta libre 000009-17)._
+_Última actualización: 2026-08-01 (Tanda 3 CERRADA · Pieza 6 · conteo cíclico)._
