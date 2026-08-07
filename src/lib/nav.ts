@@ -30,7 +30,7 @@ export const NAV: NavGroup[] = [
       { href: '/productos', label: 'Productos', icon: 'Package', cap: 'gestionar_inventario' },
       { href: '/importar', label: 'Importar', icon: 'Upload', cap: 'gestionar_inventario' },
       { href: '/conteo', label: 'Conteo cíclico', icon: 'ClipboardCheck', cap: 'gestionar_inventario' },
-      { href: '/caja', label: 'Caja', icon: 'ScanLine', cap: 'ver_operacion', proximamente: true },
+      { href: '/caja', label: 'Caja', icon: 'ScanLine', cap: 'ver_operacion' },
       { href: '/inventario', label: 'Inventario', icon: 'Package', cap: 'gestionar_inventario', proximamente: true },
       { href: '/vencimientos', label: 'Vencimientos', icon: 'CalendarClock', cap: 'ver_operacion', proximamente: true },
     ],
