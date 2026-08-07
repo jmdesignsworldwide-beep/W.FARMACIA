@@ -75,6 +75,7 @@ se marca el corte en vez de limpiarlo.
 | **1102 – 1113** | Aplicación de 0016 (concentración por confirmar + `inferido`) y su verificación: enlace clínico inferido sin dosis (principio + producto `PRUEBA T3` creados y borrados) | Prueba |
 | **1120 – 1135** | Aplicación de 0017 (gate del override): migración de los 3 productos del panel de `false` sin motivo a `null` (**real**, permanece) + test de herencia en vivo (molécula controlada + producto null → hereda, `PRUEBA T3` creados y borrados) | Mixto: la migración es **real**; el test de herencia es prueba |
 | **1136 – 1342** | Aplicación de 0018 (Tanda 3 · Pieza 4): semilla del **listado de venta libre real** (207 filas de la Res. 000009-17, INSERT que permanece) | **Real** (dato oficial, permanece) |
+| **1343 – 1352** | Cierre de la Tanda 3 + esquema del POS (0019/0020): **purga** de 5 productos `PRUEBA` (3 del panel Losartán + 2 `PRUEBA T3P3`) + 1 principio huérfano, y semilla del umbral en `configuracion` | Purga de prueba (real) + seed de config |
 
 | Dato | Valor |
 |---|---|
@@ -87,7 +88,8 @@ se marca el corte en vez de limpiarlo.
 | **Última entrada al aplicar/verificar 0015** | id **1101** · **2026-08-01** (Tanda 3 · Pieza 3: modelo de deshacer de importación) |
 | **Última entrada al aplicar/verificar 0016** | id **1113** · **2026-08-01** (Tanda 3 · Pieza 3: concentración por confirmar + `inferido`) |
 | **Última entrada al aplicar/verificar 0017** | id **1135** · **2026-08-01** (gate del override: `false` legado → `null`) |
-| **Última entrada al aplicar/verificar 0018 (CORTE ACTUAL)** | id **1342** · **2026-08-01** (Tanda 3 · Pieza 4: semilla real del listado de venta libre, 207 filas) |
+| **Última entrada al aplicar/verificar 0018** | id **1342** · **2026-08-01** (Tanda 3 · Pieza 4: semilla real del listado de venta libre, 207 filas) |
+| **Última entrada — cierre Tanda 3 + esquema POS 0019/0020 (CORTE ACTUAL)** | id **1352** · **2026-08-01** (purga de 5 `PRUEBA` + 1 principio; seed del umbral) |
 
 **Interpretación:** el `audit_log` es inviolable, así que las entradas de prueba
 permanecen. **La historia operativa real de Wilkins empieza después de la
@@ -109,7 +111,7 @@ Cada tanda que genere entradas de prueba actualiza este corte.
 
 ## 5. Checklist de purga pre-entrega
 
-- [ ] Confirmar 0 registros con prefijo `PRUEBA` **activos** en `producto`, `principio_activo`, `forma_farmaceutica`, `via_administracion`, `medicamento_oficial`.
+- [x] **Purgados (2026-08-01, cierre Tanda 3):** los 5 productos `PRUEBA` sin referencias (3 del panel Losartán + 2 `PRUEBA T3P3`) y 1 principio huérfano. Queda **1** `PRUEBA` en `producto` (`PRUEBA T3 Inviolabilidad`, borrado suave) porque los libros inviolables lo referencian — es residuo documentado, no purgable.
 - [ ] Rotar la clave provisional del Dueño.
 - [ ] Dejar constancia del corte del `audit_log` (§3) en la entrega — las entradas de prueba permanecen por diseño.
 - [ ] **Residuo inviolable de la Tanda 3 — NO se puede borrar, se documenta:**
@@ -131,4 +133,4 @@ Cada tanda que genere entradas de prueba actualiza este corte.
 
 ---
 
-_Última actualización: 2026-08-01 (Tanda 3 · Pieza 4 · 0018 — listado de venta libre: corte 1136–1342, semilla real de 207 filas)._
+_Última actualización: 2026-08-01 (cierre Tanda 3 + esquema POS 0019/0020 — purga de 5 `PRUEBA`, corte 1343–1352)._
