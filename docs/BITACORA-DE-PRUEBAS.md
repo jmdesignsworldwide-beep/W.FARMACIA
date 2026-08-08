@@ -379,3 +379,28 @@ Vercel en verde (Ready) en cada uno.
 
 ## 🔗 PR
 #34.
+
+## ✅ Pieza 3 (PR #35) — Recepción con conteo contra factura + deriva de costo
+
+- **Migración `0031`** (**aplicada a producción**): `recepcion` + `recepcion_linea`
+  con **discrepancias calculadas** (recibido−pedido, facturado−cotizado) guardadas
+  permanentemente. RLS+FORCE.
+- **App `/recepcion`**: buscar producto, capturar pedido/recibido/cotizado/facturado/
+  lote/vencimiento por renglón; **deriva de costo en vivo** (si llegó más caro,
+  el % y el precio sugerido para mantener el margen); al confirmar se crean los
+  **lotes**, los **movimientos de entrada** (inviolables) y el **historial de costo**
+  con su variación. Validación de fechas de vencimiento imposibles.
+
+## 🔬 Probado (base local)
+- `0031` idempotente (3×). Renglón recibido 96/100 a RD$46.60 (cotizado 42.00) →
+  `discrepancia_cantidad=-4`, `discrepancia_precio=+4.60` (el 11% del brief),
+  calculadas por columna generada. **Aplicada a producción**. ✅
+- `typecheck` / `lint` / `build` en verde.
+
+## ⚠️ Pendiente (Tanda 9)
+- **Ficha de cumplimiento** del proveedor (agregado de discrepancias) — pantalla.
+- **Préstamos entre farmacias** y **visitadores médicos** (muestras) — piezas
+  siguientes.
+
+## 🔗 PR
+#35.
