@@ -182,15 +182,31 @@ Vercel en verde (Ready) en cada uno.
 - **Comprobante inviolable**: `UPDATE` **negado por la base**. ✅
 - **Estático**: `typecheck` / `lint` / `build` en verde.
 
-## ⚠️ NO construido aún (siguientes piezas de la Tanda 6)
+## ✅ Pieza 2 (PR #26) — emisión + configuración
 
-- **Cargar rangos** (pantalla Dueño/Admin) y **alerta de agotamiento**.
-- **Emitir comprobante en el cobro** (B02 consumidor final por defecto; B01 con
-  RNC), **preguntar RNC** en el momento correcto sin trabar la venta.
+- **Migración `0023`**: envoltorio `public.siguiente_ncf` (PostgREST no expone
+  `app`), mismo blindaje (SECURITY DEFINER, search_path fijo, execute a
+  `authenticated`).
+- **Emisión en el cobro**: al cobrar se emite el comprobante — **B01** si hay RNC,
+  **B02** consumidor final si no. Campo **RNC** en el modal de cobro; el **NCF**
+  sale en el recibo. Si no hay secuencia configurada, la venta **NO se bloquea**:
+  se completa sin NCF (skip con gracia).
+- **Pantalla `/fiscal`** (Dueño/Admin): cargar rangos autorizados por la DGII,
+  con **alerta "por agotarse"** y activar/desactivar.
+
+## 🔬 Probado (base local)
+
+- `0023` idempotente (3×). `public.siguiente_ncf('B02')` → `B0200000101`;
+  `B01` sin rango → **error controlado** → la venta se completa **sin NCF**. ✅
+- `typecheck` / `lint` / `build` en verde (`/fiscal` en el build).
+
+## ⚠️ NO construido aún (Tanda 6)
+
 - **Recibo** imprimible / térmico (QZ Tray) y compartible por WhatsApp.
-- **Nota de crédito** (B04) para anular.
-- **Migración `0022` NO aplicada a producción — pendiente del PAT.**
+- **Nota de crédito** (B04) para anular un comprobante.
+- **Migraciones `0022`/`0023` NO aplicadas a producción — pendiente del PAT.**
+- **End-to-end en preview**: no ejecutable hasta aplicar el esquema.
 
-## 🔗 PR
+## 🔗 PRs
 
-Pieza 1 (esquema) — ver abajo.
+#25 (Pieza 1 — esquema) · #26 (Pieza 2 — emisión + config).

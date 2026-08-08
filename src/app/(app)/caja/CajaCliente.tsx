@@ -79,7 +79,8 @@ export function CajaCliente({
   const [recibido, setRecibido] = useState('');
   const [procesando, setProcesando] = useState(false);
   const [errorCobro, setErrorCobro] = useState<string | null>(null);
-  const [exito, setExito] = useState<{ vuelto: number; total: number; ventaId: string } | null>(null);
+  const [rnc, setRnc] = useState('');
+  const [exito, setExito] = useState<{ vuelto: number; total: number; ventaId: string; ncf: string | null } | null>(null);
   const idemRef = useRef<string>('');
   const recibidoRef = useRef<HTMLInputElement>(null);
 
@@ -164,6 +165,7 @@ export function CajaCliente({
     if (carrito.length === 0 || bloqueadoClinico) return;
     idemRef.current = nuevoId();
     setRecibido('');
+    setRnc('');
     setErrorCobro(null);
     setExito(null);
     setCobrando(true);
@@ -258,9 +260,10 @@ export function CajaCliente({
       idempotencia: idemRef.current,
       recibido: recibidoNum,
       lineas: carrito.map((l) => ({ productoId: l.id, cantidad: l.cantidad })),
+      rnc: rnc.trim() || undefined,
     });
     if (res.ok && res.ventaId) {
-      setExito({ vuelto: res.vuelto ?? 0, total: res.total ?? totales.total, ventaId: res.ventaId });
+      setExito({ vuelto: res.vuelto ?? 0, total: res.total ?? totales.total, ventaId: res.ventaId, ncf: res.ncf ?? null });
       setAnulada(false);
       setCarrito([]);
       setCobrando(false);
@@ -594,6 +597,7 @@ export function CajaCliente({
           <div className="mb-2 flex items-center gap-2 rounded-control border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-700 dark:text-emerald-300">
             <Check className="h-4 w-4" /> Cobrado {formatMoney(exito.total)}
             {exito.vuelto > 0 && <span className="font-semibold">· Vuelto {formatMoney(exito.vuelto)}</span>}
+            {exito.ncf && <span className="tabular-nums">· NCF {exito.ncf}</span>}
             {puedeAnular && (
               <button
                 onClick={abrirAnulacion}
@@ -701,6 +705,16 @@ export function CajaCliente({
               >
                 {vuelto < -0.001 ? 'Falta ' + formatMoney(-vuelto) : formatMoney(Math.max(0, vuelto))}
               </span>
+            </div>
+
+            <div className="mt-3">
+              <label className="mb-1 block text-xs text-ink-soft">RNC (opcional — emite crédito fiscal B01)</label>
+              <input
+                value={rnc}
+                onChange={(e) => setRnc(e.target.value)}
+                placeholder="Sin RNC = consumidor final (B02)"
+                className="h-10 w-full rounded-control border border-line bg-canvas px-3 text-ink outline-none focus:luminous"
+              />
             </div>
 
             {errorCobro && (
