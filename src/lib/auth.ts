@@ -17,6 +17,7 @@ export interface SessionUser {
   email: string | null;
   nombre: string;
   role: Role;
+  debeCambiarPassword: boolean;
 }
 
 /** Devuelve el usuario autenticado con su rol, o null. Valida contra Supabase. */
@@ -29,9 +30,9 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, nombre, role')
+    .select('id, nombre, role, debe_cambiar_password')
     .eq('id', user.id)
-    .single<{ id: string; nombre: string; role: string }>();
+    .single<{ id: string; nombre: string; role: string; debe_cambiar_password: boolean | null }>();
 
   if (!profile || !isRole(profile.role)) return null;
 
@@ -40,6 +41,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     email: user.email ?? null,
     nombre: profile.nombre,
     role: profile.role,
+    debeCambiarPassword: Boolean(profile.debe_cambiar_password),
   };
 }
 

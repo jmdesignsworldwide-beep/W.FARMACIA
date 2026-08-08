@@ -1195,3 +1195,41 @@ Pendiente (Parte 4.1).
 
 ## 🔗 PR
 Pendiente (Parte 4.2).
+
+---
+
+# CIERRE MAESTRO · PARTE 4.3 — FORZAR CAMBIO DE CLAVE AL 1ER INGRESO · 2026-08-08
+
+## ✅ Construido — migración `0041`
+
+- **Migración `0041`** (a producción, `HTTP 201`; idempotente 3× local):
+  `profiles.debe_cambiar_password` (default **false** → el Dueño y los usuarios ya
+  existentes **no se ven afectados**). El trigger `app.handle_new_user()` ahora marca
+  a **todo usuario nuevo** con `debe_cambiar_password = true`. Función
+  `marcar_clave_cambiada()` (SECURITY DEFINER, wrapper público) que baja la bandera
+  **solo en la fila del propio usuario** (`auth.uid()`), sin darle UPDATE directo a la tabla.
+- **El gate**: el layout de la app (`(app)/layout.tsx`) **redirige a `/cambiar-clave`**
+  si la bandera está puesta → **no puede navegar** hasta cambiarla.
+- **`/cambiar-clave`** (ruta propia, fuera del layout, sin loop): pide clave nueva
+  (mín. 8) y repetición; `supabase.auth.updateUser({password})` → `marcar_clave_cambiada()`
+  → entra al dashboard. **Esto elimina las claves iniciales circulando por WhatsApp.**
+
+## 🔬 Probado (Postgres local)
+- **Prueba de vida del flujo**: nuevo `auth.users` → su profile nace con
+  `debe_cambiar_password = **true**`; como ese usuario `authenticated`,
+  `public.marcar_clave_cambiada()` → la bandera baja a **false**. ✔
+- Idempotente 3× (funciones con `create or replace`, columna `if not exists`).
+- `typecheck` / `lint` / `build` en verde; `/cambiar-clave` compila.
+
+## ⚠️ Honesto
+- El **cambio de contraseña real** (Supabase Auth `updateUser`) no se puede ejercitar
+  desde este entorno sin sesión de navegador; la **lógica de la bandera** sí está
+  probada en la base, y el build valida el formulario. La prueba de punta a punta
+  (crear empleado → login con temporal → forzado a cambiar) la cierra Marien en el preview.
+- La **rotación de la clave provisional del Dueño** sigue siendo manual (él ya existe
+  con la bandera en false, por diseño, para no trabarlo) — queda en el checklist de entrega.
+- Artefacto de prueba: 1 `auth.users` `@wfarmacia-test.local` en el DB **local**
+  (retenido por el FK del `audit_log`, inviolable); efímero, nunca tocó producción.
+
+## 🔗 PR
+Pendiente (Parte 4.3).
