@@ -134,6 +134,7 @@ export function CajaCliente({
   const [procAnul, setProcAnul] = useState(false);
   const [errAnul, setErrAnul] = useState<string | null>(null);
   const [anulada, setAnulada] = useState(false);
+  const [notaCredito, setNotaCredito] = useState<{ ncf: string | null; aviso?: string } | null>(null);
 
   const resultados = useMemo(() => {
     const t = normaliza(q).trim();
@@ -423,6 +424,7 @@ export function CajaCliente({
       setAnulando(false);
       setProcAnul(false);
       setAnulada(true);
+      setNotaCredito({ ncf: res.notaCreditoNcf ?? null, aviso: res.avisoFiscal });
       setExito(null);
       router.refresh(); // el stock volvió al lote
     } else {
@@ -811,8 +813,10 @@ export function CajaCliente({
           </div>
         )}
         {anulada && (
-          <div className="mb-2 flex items-center gap-2 rounded-control border border-rose-500/40 bg-rose-500/5 px-3 py-1.5 text-sm text-rose-700 dark:text-rose-300">
+          <div className="mb-2 flex flex-wrap items-center gap-2 rounded-control border border-rose-500/40 bg-rose-500/5 px-3 py-1.5 text-sm text-rose-700 dark:text-rose-300">
             <RotateCcw className="h-4 w-4" /> Venta anulada · la mercancía volvió a su lote
+            {notaCredito?.ncf && <span className="tabular-nums">· Nota de crédito {notaCredito.ncf}</span>}
+            {notaCredito?.aviso && <span className="text-amber-600 dark:text-amber-400">· {notaCredito.aviso}</span>}
           </div>
         )}
         {aviso && (

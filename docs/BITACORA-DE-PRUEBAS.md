@@ -1154,3 +1154,44 @@ Pendiente (Parte 3 · Pieza B — cierra Parte 3).
 
 ## 🔗 PR
 Pendiente (Parte 4.1).
+
+---
+
+# CIERRE MAESTRO · PARTE 4.2 — NOTA DE CRÉDITO B04 · 2026-08-08
+
+## ✅ Construido — migración `0040`
+
+- **Migración `0040`** (a producción, `HTTP 201`; idempotente 3× local):
+  `comprobante.ncf_modificado` — el NCF que la nota de crédito B04 modifica
+  (obligación DGII). El comprobante original **es inviolable y NO se toca**.
+- **`anularVenta` emite la B04 automáticamente**: al anular una venta con NCF
+  (B01/B02), toma el **siguiente número de la secuencia B04** (misma alerta de
+  agotamiento), inserta un comprobante **nuevo** tipo B04 con el subtotal/ITBIS/total
+  del original, **`ncf_modificado` = NCF original** (referencia obligatoria), y el
+  **motivo** de anulación queda en la venta. La **venta original y su comprobante
+  quedan intactos**; se anula con un documento nuevo, nunca se altera.
+- Si no hay secuencia B04 configurada, la anulación **igual se completa** y se avisa
+  ("configúrala en Fiscal") — no se bloquea la operación por un tema de secuencia.
+- **En el POS**: al anular se muestra el NCF de la nota de crédito (o el aviso).
+- **En el recibo**: si la venta tiene B04, el ticket imprime "Nota de crédito: … (B04)"
+  → reimprimible por su URL.
+
+## 🔬 Probado — CRÍTICO (Parte 6 · #5), en Postgres local
+- **La nota de crédito se emite al anular** y el **comprobante original queda intacto**:
+  - Original B02 → **`emitido`** (sin tocar). B04 emitido con
+    **`ncf_modificado = B0200000001`** (referencia correcta al original). ✔
+  - El comprobante es **INVIOLABLE**: intentar `UPDATE`/`DELETE` sobre el original →
+    **"Registro inviolable (ADN §2.2)"**. El original **no se puede editar** — que es
+    exactamente lo que la DGII exige. ✔
+- `0040` idempotente 3×; `typecheck` / `lint` / `build` en verde.
+
+## ⚠️ Honesto
+- Los 2 comprobantes de prueba del test **no se pudieron borrar del DB local** (son
+  inviolables por diseño, como el `audit_log`); el DB local es efímero y **nunca tocó
+  producción** (a producción solo fue el esquema `0040`).
+- La **impresión** de la nota de crédito comparte la plantilla del recibo (muestra el
+  B04 y "VENTA ANULADA"); un formato de nota de crédito dedicado es cosmético y se
+  puede afinar después.
+
+## 🔗 PR
+Pendiente (Parte 4.2).
