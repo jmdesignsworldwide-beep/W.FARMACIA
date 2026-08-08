@@ -31,6 +31,7 @@ export function AjustesCliente({ config }: { config: ConfigMap }) {
   const [direccion, setDireccion] = useState(str(config['farmacia_direccion'], ''));
   const [telefono, setTelefono] = useState(str(config['farmacia_telefono'], ''));
   const [reciboMsg, setReciboMsg] = useState(str(config['recibo_mensaje'], '¡Gracias por su compra! Que se mejore.'));
+  const [reciboAuto, setReciboAuto] = useState(config['recibo_auto_imprimir'] === true || config['recibo_auto_imprimir'] === 'true');
 
   // Avisos
   const [diasVenc, setDiasVenc] = useState(String(num(config['dias_alerta_vencimiento'], 180)));
@@ -85,7 +86,14 @@ export function AjustesCliente({ config }: { config: ConfigMap }) {
       <div className={card}>
         <div className="mb-3 flex items-center gap-2 font-medium text-ink"><Receipt className="h-4 w-4 text-accent" /> Mensaje del recibo</div>
         <input value={reciboMsg} onChange={(e) => setReciboMsg(e.target.value)} className={inp} placeholder="Lo que va al pie del recibo" />
-        <button onClick={() => void guardar('recibo', () => guardarConfig('recibo_mensaje', reciboMsg.trim()))} disabled={busy === 'recibo'} className="brand-gradient mt-3 inline-flex items-center gap-1.5 rounded-control px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">
+        <label className="mt-3 flex items-center gap-2 text-sm text-ink">
+          <input type="checkbox" checked={reciboAuto} onChange={(e) => setReciboAuto(e.target.checked)} /> Imprimir el recibo automáticamente al cobrar
+        </label>
+        <button onClick={() => void guardar('recibo', async () => {
+          const r1 = await guardarConfig('recibo_mensaje', reciboMsg.trim());
+          if (r1.error) return r1;
+          return guardarConfig('recibo_auto_imprimir', reciboAuto);
+        })} disabled={busy === 'recibo'} className="brand-gradient mt-3 inline-flex items-center gap-1.5 rounded-control px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">
           {busy === 'recibo' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Guardar
         </button>
       </div>
