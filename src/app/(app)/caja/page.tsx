@@ -113,12 +113,18 @@ export default async function CajaPage() {
     .map((r) => ({ id: r.id, etiqueta: r.etiqueta, lineas: Array.isArray(r.carrito) ? r.carrito : [], creadoEn: r.created_at }))
     .filter((r) => r.lineas.length > 0);
 
+  // §4.1 — impresión automática del recibo al cobrar (configurable en Ajustes).
+  const { data: cfgRecibo } = await supabase
+    .from('configuracion').select('valor').eq('clave', 'recibo_auto_imprimir').eq('sucursal_id', '00000000-0000-0000-0000-000000000001').maybeSingle<{ valor: unknown }>();
+  const reciboAutoImprimir = cfgRecibo?.valor === true || cfgRecibo?.valor === 'true';
+
   return (
     <CajaCliente
       catalogo={catalogo}
       puedeDespacharControlados={puedeDespacharControlados}
       puedeAnular={puedeAnular}
       enEspera={enEspera}
+      reciboAutoImprimir={reciboAutoImprimir}
     />
   );
 }

@@ -2,7 +2,7 @@
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, ArrowLeftRight, Banknote, Check, Loader2, Lock, MapPin, Package, PauseCircle, Pill, RotateCcw, ScanLine, ShieldAlert, ShieldCheck, ShoppingCart, Trash2, User, Wallet, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeftRight, Banknote, Check, Loader2, Lock, MapPin, Package, PauseCircle, Pill, Printer, RotateCcw, ScanLine, ShieldAlert, ShieldCheck, ShoppingCart, Trash2, User, Wallet, X } from 'lucide-react';
 import { BRAND } from '@/lib/tokens';
 import { formatMoney, formatNumber } from '@/lib/format';
 import { normaliza } from '@/lib/catalogos';
@@ -73,11 +73,13 @@ export function CajaCliente({
   puedeDespacharControlados,
   puedeAnular,
   enEspera,
+  reciboAutoImprimir = false,
 }: {
   catalogo: CatalogoItem[];
   puedeDespacharControlados: boolean;
   puedeAnular: boolean;
   enEspera: CarritoEnEspera[];
+  reciboAutoImprimir?: boolean;
 }) {
   const router = useRouter();
   const online = useOnline();
@@ -387,6 +389,8 @@ export function CajaCliente({
     });
     if (res.ok && res.ventaId) {
       setExito({ vuelto: res.vuelto ?? 0, total: res.total ?? totales.total, ventaId: res.ventaId, ncf: res.ncf ?? null });
+      // §4.1 Impresión automática al cobrar (configurable en Ajustes).
+      if (reciboAutoImprimir) window.open(`/recibo/${res.ventaId}?auto=1`, '_blank');
       setAnulada(false);
       setCarrito([]);
       setCobrando(false);
@@ -788,6 +792,14 @@ export function CajaCliente({
             <Check className="h-4 w-4" /> Cobrado {formatMoney(exito.total)}
             {exito.vuelto > 0 && <span className="font-semibold">· Vuelto {formatMoney(exito.vuelto)}</span>}
             {exito.ncf && <span className="tabular-nums">· NCF {exito.ncf}</span>}
+            <a
+              href={`/recibo/${exito.ventaId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-control border border-line px-2 py-0.5 text-xs text-ink-soft hover:text-accent"
+            >
+              <Printer className="h-3 w-3" /> Recibo
+            </a>
             {puedeAnular && (
               <button
                 onClick={abrirAnulacion}

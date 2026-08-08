@@ -1114,3 +1114,43 @@ Pendiente (Parte 3 · Pieza A).
 
 ## 🔗 PR
 Pendiente (Parte 3 · Pieza B — cierra Parte 3).
+
+---
+
+# CIERRE MAESTRO · PARTE 4.1 — RECIBO IMPRIMIBLE · 2026-08-08
+
+## ✅ Construido — sin migración
+
+- **Ruta `/recibo/[ventaId]`** (fuera del layout con barra lateral → no imprime el menú):
+  recibo **térmico 80mm** con `@page { size: 80mm auto }` y CSS de impresión que oculta
+  todo menos el ticket.
+- Contenido: **identidad de la farmacia** (nombre/RNC/dirección/teléfono desde
+  `configuracion`, con respaldo a la marca), **fecha**, **cajero**, **NCF** y tipo,
+  RNC del cliente si lo hay; **líneas** con producto, cantidad × precio, marca
+  **(frac.)** si fue fraccionado; **subtotal**, **ITBIS 18%** y **exento** separados,
+  **descuento**, **TOTAL**; **método(s) de pago** y **vuelto**; **mensaje del recibo**
+  configurable y **"Hecho por JM Nexus Designs"**. Marca **VENTA ANULADA** si aplica.
+- **Impresión automática al cobrar, configurable**: interruptor en `/ajustes`
+  (`recibo_auto_imprimir`); si está activo, al cobrar se abre el recibo con `?auto=1`
+  y dispara `window.print()` solo.
+- **Botón "Recibo"** en el banner de éxito del POS (abre en pestaña nueva).
+- **Vista previa en pantalla** (para farmacias sin impresora): la misma ruta es la
+  vista previa, con botones Imprimir / Volver.
+- **Reimprimir**: la ruta es por `ventaId` → cualquier venta se reimprime por su URL.
+
+## 🔬 Probado
+- `typecheck` / `lint` / `build` en verde; `/recibo/[ventaId]` compila (1.32 kB).
+- Las consultas (venta, venta_linea, comprobante, cobro, configuracion) coinciden con
+  el esquema; el ITBIS gravado sale de `venta.itbis` y el exento se suma de las líneas
+  sin ITBIS.
+
+## ⚠️ Honesto
+- **La prueba visual de impresión** (que el ticket salga bien en una térmica de 80mm)
+  la hace Marien en el preview — este entorno no tiene navegador ni impresora. El
+  cableado de datos y el CSS de impresión están; el "se ve bien en papel" lo confirma ella.
+- **Reimprimir desde un historial de ventas**: hoy el recibo se reimprime por su URL
+  (`/recibo/<ventaId>`) y desde el banner del POS. Una **lista de ventas** con botón de
+  reimpresión para ventas viejas queda anotada (la ruta ya soporta cualquier venta).
+
+## 🔗 PR
+Pendiente (Parte 4.1).
