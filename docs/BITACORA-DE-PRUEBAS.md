@@ -581,3 +581,27 @@ Vercel en verde (Ready) en cada uno.
 
 ## 🔗 PR
 #42.
+
+---
+
+# TANDA 14 — REPORTES E INTELIGENCIA · 2026-08-08
+
+## ✅ Construido (PR #43) — sin migración
+
+- **Página `/reportes`** (Dueño/Admin): **más vendidos** (90d, barras), **merma por
+  motivo tipificado** (180d, en pesos), **posible robo hormiga** (discrepancias
+  negativas repetidas por producto — "muestra el patrón, no acusa"), **encargos no
+  atendidos = ventas perdidas**, y **controlados despachados** (30d). Gráficos con
+  barras simples (bajo riesgo; sin dependencia nueva).
+
+## 🔬 Probado
+- `typecheck` / `lint` / `build` en verde.
+
+## ⚠️ Pendiente / honesto
+- **Export PDF/Excel** tabular completo → se agrupa con Configuración (Tanda 17);
+  la carpeta DIGEMAPS ya imprime.
+- **Reporte de equivalentes sugeridos/aceptados**: requiere registrar la aceptación
+  del equivalente en el POS (no se captura hoy) — mejora futura.
+
+## 🔗 PR
+#43.
