@@ -20,6 +20,8 @@ export interface CobrarEfectivoInput {
   lineas: LineaCobro[];
   /** RNC del receptor: si viene, se emite crédito fiscal (B01); si no, consumidor final (B02). */
   rnc?: string;
+  /** Cliente identificado (opcional): la mayoría de ventas son anónimas. */
+  clienteId?: string | null;
 }
 
 export interface CobrarResultado {
@@ -164,6 +166,7 @@ export async function cobrarEnEfectivo(input: CobrarEfectivoInput): Promise<Cobr
       empleado_id: user.id,
       sucursal_id: SUCURSAL,
       caja_sesion_id: cajaAbierta?.id ?? null,
+      cliente_id: input.clienteId ?? null,
       subtotal,
       itbis,
       descuento: 0,
@@ -235,6 +238,87 @@ export async function cobrarEnEfectivo(input: CobrarEfectivoInput): Promise<Cobr
 
   revalidatePath('/caja');
   return { ok: true, ventaId, total, vuelto: round2(Math.max(0, recibido - total)), ncf, tipoNcf };
+}
+
+export interface ClienteIdentificado {
+  id: string;
+  nombre: string;
+  telefono: string | null;
+  alergias: string[];
+}
+
+/** Identifica al cliente por teléfono (el identificador de 3 segundos). */
+export async function identificarCliente(telefono: string): Promise<{ cliente?: ClienteIdentificado; error?: string }> {
+  const user = await getSessionUser();
+  if (!user || !can(user.role, 'ver_operacion')) return { error: 'No autorizado.' };
+  const tel = telefono.trim();
+  if (!tel) return { error: 'Escribe un teléfono.' };
+  const supabase = createClient();
+  const { data: cli } = await supabase
+    .from('cliente')
+    .select('id, nombre, telefono')
+    .eq('telefono', tel)
+    .is('eliminado_en', null)
+    .limit(1)
+    .maybeSingle<{ id: string; nombre: string; telefono: string | null }>();
+  if (!cli) return { error: 'No hay cliente con ese teléfono.' };
+
+  const { data: al } = await supabase
+    .from('cliente_alergia')
+    .select('familia:familia_alergenica_id ( nombre ), principio:principio_activo_id ( nombre )')
+    .eq('cliente_id', cli.id);
+  const alergias = ((al as unknown as Array<{ familia: { nombre: string } | null; principio: { nombre: string } | null }>) ?? [])
+    .map((a) => a.familia?.nombre ?? a.principio?.nombre)
+    .filter((n): n is string => Boolean(n));
+
+  return { cliente: { id: cli.id, nombre: cli.nombre, telefono: cli.telefono, alergias } };
+}
+
+export interface ConflictoAlergia {
+  productoId: string;
+  productoNombre: string;
+  familia: string | null;
+  familiaId: string | null;
+}
+
+/** Devuelve los productos del carrito que chocan con una alergia del cliente. */
+export async function revisarAlergias(clienteId: string, productoIds: string[]): Promise<ConflictoAlergia[]> {
+  const user = await getSessionUser();
+  if (!user || !can(user.role, 'ver_operacion')) return [];
+  if (!clienteId || productoIds.length === 0) return [];
+  const supabase = createClient();
+  const { data } = await supabase.rpc('alergias_en_conflicto' as never, { p_cliente: clienteId, p_productos: productoIds } as never);
+  return ((data as unknown as Array<{ producto_id: string; producto_nombre: string; familia: string | null; familia_id: string | null }>) ?? []).map((r) => ({
+    productoId: r.producto_id,
+    productoNombre: r.producto_nombre,
+    familia: r.familia,
+    familiaId: r.familia_id,
+  }));
+}
+
+/** Registra en el libro inviolable la decisión ante la alerta cruzada. */
+export async function registrarDecisionAlergia(
+  clienteId: string,
+  decision: 'no_despachado' | 'despachado_con_confirmacion',
+  motivo: string,
+  conflictos: ConflictoAlergia[],
+): Promise<{ ok?: true; error?: string }> {
+  const user = await getSessionUser();
+  if (!user || !can(user.role, 'ver_operacion')) return { error: 'No autorizado.' };
+  const supabase = createClient();
+  const filas = conflictos.map((c) => ({
+    cliente_id: clienteId,
+    producto_id: c.productoId,
+    familia_alergenica_id: c.familiaId,
+    decision,
+    motivo: motivo.trim() || null,
+    decidido_por: user.id,
+  }));
+  if (filas.length > 0) {
+    const { error } = await supabase.from('alerta_alergia_evento').insert(filas as never);
+    if (error) return { error: 'No se pudo registrar la decisión.' };
+  }
+  return { ok: true };
 }
 
 export interface LineaEnEspera {

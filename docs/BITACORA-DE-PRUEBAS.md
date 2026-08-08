@@ -239,15 +239,30 @@ Vercel en verde (Ready) en cada uno.
 - **Idempotencia `0024`**: re-aplicada **3×** sin error. ✅
 - `typecheck` / `lint` / `build` en verde.
 
+## ✅ Pieza 2 (PR #29) — integración en el POS
+
+- **Migración `0025`** (`public.alergias_en_conflicto`): función que, dado el
+  cliente y los productos del carrito, devuelve los choques por familia/principio.
+  **Aplicada a producción** y verificada.
+- **En la caja**: identificar al cliente **por teléfono**; si el carrito choca con
+  una alergia, un **banner** lo avisa y, al cobrar (F4), un **modal INTERRUMPE**:
+  «No despachar» o «Despachar con confirmación» (motivo obligatorio). La decisión
+  se guarda en `alerta_alergia_evento` (inviolable). La venta se enlaza al cliente.
+
+## 🔬 Probado
+
+- `0025` idempotente (3×) en local; `alergias_en_conflicto(Doña Ana, [Ampicilina])`
+  → «Ampicilina 500mg | Penicilinas». **Aplicada a producción** (función presente). ✅
+- `typecheck` / `lint` / `build` en verde.
+- **NO probado end-to-end en preview** por el agente (requiere sembrar un cliente
+  con alergia y una sesión con login); la lógica de detección sí está verificada.
+
 ## ⚠️ NO construido aún (Tanda 7)
 
-- **Integración en el POS**: identificar al cliente por teléfono, **interrumpir**
-  el despacho con la alerta y **registrar la decisión** (Pieza 2). El núcleo de
-  detección ya está probado; falta el flujo en pantalla.
 - **Crónicos** (detección automática, ciclo, atrasados, WhatsApp) y **servicios de
   farmacia** (inyección/presión/glucosa) — piezas siguientes.
-- **Migración `0024` NO aplicada a producción — pendiente del PAT.**
 
-## 🔗 PR
+## 🔗 PRs
 
-#27 (Pieza 1 — esquema + detección verificada).
+#27 (Pieza 1 — esquema) · #29 (Pieza 2 — POS: identificación + alerta que interrumpe).
+Migraciones `0024`/`0025` **aplicadas a producción**.
