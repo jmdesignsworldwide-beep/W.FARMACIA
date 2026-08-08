@@ -189,3 +189,71 @@ export async function cobrarEnEfectivo(input: CobrarEfectivoInput): Promise<Cobr
   revalidatePath('/caja');
   return { ok: true, ventaId, total, vuelto: round2(Math.max(0, recibido - total)) };
 }
+
+export interface AnularResultado {
+  ok?: true;
+  ya?: boolean;
+  error?: string;
+}
+
+/**
+ * Anula una venta COMPLETADA: devuelve cada cantidad al MISMO lote del que salió,
+ * deja un movimiento `devolucion` (positivo) por línea en el libro inviolable, y
+ * marca la venta como anulada con su motivo y su responsable. Nunca se borra: la
+ * venta queda con rastro. Solo Dueño/Administrador (capacidad `anular_ventas`),
+ * validado en el servidor. El motivo es OBLIGATORIO.
+ */
+export async function anularVenta(ventaId: string, motivo: string): Promise<AnularResultado> {
+  const user = await getSessionUser();
+  if (!user || !can(user.role, 'anular_ventas')) return { error: 'No autorizado para anular ventas.' };
+  const razon = (motivo ?? '').trim();
+  if (!razon) return { error: 'La anulación exige un motivo.' };
+  if (!ventaId) return { error: 'Venta no indicada.' };
+
+  const supabase = createClient();
+  const { data: venta } = await supabase
+    .from('venta')
+    .select('id, estado')
+    .eq('id', ventaId)
+    .maybeSingle<{ id: string; estado: string }>();
+  if (!venta) return { error: 'La venta no existe.' };
+  if (venta.estado === 'anulada') return { ok: true, ya: true };
+  if (venta.estado !== 'completada') return { error: 'Solo se anula una venta completada.' };
+
+  const { data: lineasData } = await supabase
+    .from('venta_linea')
+    .select('producto_id, lote_id, cantidad')
+    .eq('venta_id', ventaId);
+  const lineas = (lineasData as unknown as Array<{ producto_id: string; lote_id: string | null; cantidad: number }>) ?? [];
+
+  for (const l of lineas) {
+    if (!l.lote_id) continue;
+    const { data: lote } = await supabase
+      .from('lote')
+      .select('cantidad_actual')
+      .eq('id', l.lote_id)
+      .maybeSingle<{ cantidad_actual: number }>();
+    const saldo = Number(lote?.cantidad_actual ?? 0) + Number(l.cantidad);
+    await supabase.from('movimiento_inventario').insert({
+      producto_id: l.producto_id,
+      lote_id: l.lote_id,
+      sucursal_id: SUCURSAL,
+      tipo: 'devolucion',
+      cantidad: Number(l.cantidad),
+      cantidad_resultante: saldo,
+      motivo: `Anulación de venta: ${razon}`,
+      referencia: `anulacion:${ventaId}`,
+      empleado_id: user.id,
+    } as never);
+    // Devolver al mismo lote y revivirlo si había quedado agotado.
+    await supabase.from('lote').update({ cantidad_actual: saldo, estado: 'activo' } as never).eq('id', l.lote_id);
+  }
+
+  await supabase
+    .from('venta')
+    .update({ estado: 'anulada', anulada_motivo: razon, anulada_por: user.id, anulada_en: new Date().toISOString() } as never)
+    .eq('id', ventaId);
+
+  revalidatePath('/caja');
+  return { ok: true };
+}
