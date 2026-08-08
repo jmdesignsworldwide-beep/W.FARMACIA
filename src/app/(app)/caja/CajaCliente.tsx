@@ -2,7 +2,7 @@
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeftRight, Banknote, Check, Loader2, Lock, MapPin, Package, Pill, RotateCcw, ScanLine, ShieldCheck, ShoppingCart, Trash2, X } from 'lucide-react';
+import { ArrowLeftRight, Banknote, Check, Loader2, Lock, MapPin, Package, Pill, RotateCcw, ScanLine, ShieldCheck, ShoppingCart, Trash2, Wallet, X } from 'lucide-react';
 import { BRAND } from '@/lib/tokens';
 import { formatMoney, formatNumber } from '@/lib/format';
 import { normaliza } from '@/lib/catalogos';
@@ -17,6 +17,8 @@ export interface CatalogoItem {
   receta: boolean;
   existencia: number;
   ubicacion: string | null;
+  fraccionable: boolean;
+  unidadBase: string;
   busqueda: string;
   firmaMolecula: string;
   firmaCompleta: string;
@@ -78,6 +80,11 @@ export function CajaCliente({
   const [exito, setExito] = useState<{ vuelto: number; total: number; ventaId: string } | null>(null);
   const idemRef = useRef<string>('');
   const recibidoRef = useRef<HTMLInputElement>(null);
+
+  // ¿Cuánto le alcanza? (F3)
+  const [presupuesto, setPresupuesto] = useState<CatalogoItem | null>(null);
+  const [monto, setMonto] = useState('');
+  const montoRef = useRef<HTMLInputElement>(null);
 
   // Anulación de la última venta (solo Dueño/Administrador)
   const [anulando, setAnulando] = useState(false);
@@ -159,6 +166,40 @@ export function CajaCliente({
     setCobrando(false);
     setProcesando(false);
     setErrorCobro(null);
+  }
+
+  function abrirPresupuesto() {
+    if (!destacado) return;
+    setPresupuesto(destacado);
+    setMonto('');
+    setTimeout(() => montoRef.current?.focus(), 50);
+  }
+
+  function agregarPresupuesto(it: CatalogoItem, n: number) {
+    if (n <= 0) return;
+    setCarrito((c) => {
+      const i = c.findIndex((l) => l.id === it.id);
+      if (i >= 0) {
+        const nx = [...c];
+        nx[i] = { ...nx[i], cantidad: n };
+        return nx;
+      }
+      return [
+        {
+          id: it.id,
+          nombre: it.nombre,
+          precio: it.precio,
+          exentoItbis: it.exentoItbis,
+          cantidad: n,
+          existencia: it.existencia,
+          controlado: it.controlado,
+          receta: it.receta,
+        },
+        ...c,
+      ];
+    });
+    setPresupuesto(null);
+    buscarRef.current?.focus();
   }
 
   async function confirmarCobro() {
@@ -265,7 +306,17 @@ export function CajaCliente({
         }
         return;
       }
-      if (e.key === 'F2') {
+      if (presupuesto) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setPresupuesto(null);
+        }
+        return;
+      }
+      if (e.key === 'F3') {
+        e.preventDefault();
+        abrirPresupuesto();
+      } else if (e.key === 'F2') {
         e.preventDefault();
         const ult = carrito[carrito.length - 1];
         if (ult) qtyRefs.current[ult.id]?.select();
@@ -284,7 +335,7 @@ export function CajaCliente({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [carrito, query, cobrando, bloqueadoClinico, recibido]);
+  }, [carrito, query, cobrando, bloqueadoClinico, recibido, presupuesto, destacado]);
 
   function onBuscarKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'ArrowDown') {
@@ -405,6 +456,12 @@ export function CajaCliente({
                   <MapPin className="h-4 w-4 text-ink-faint" /> {destacado.ubicacion}
                 </div>
               )}
+              <button
+                onClick={abrirPresupuesto}
+                className="inline-flex items-center gap-1.5 rounded-control border border-line px-2.5 py-1 text-xs text-ink-soft hover:luminous"
+              >
+                <Wallet className="h-3.5 w-3.5" /> ¿Cuánto le alcanza? <span className="text-ink-faint">F3</span>
+              </button>
               {(destacado.controlado || destacado.receta) && (
                 <div className="flex flex-wrap gap-1.5">
                   {destacado.controlado && (
@@ -600,6 +657,85 @@ export function CajaCliente({
           </div>
         </div>
       )}
+
+      {/* ¿Cuánto le alcanza? (F3) */}
+      {presupuesto &&
+        (() => {
+          const p = presupuesto;
+          const m = Number(monto) || 0;
+          const maxU = p.precio > 0 ? Math.min(Math.floor(m / p.precio), Math.max(0, Math.floor(p.existencia))) : 0;
+          const totalP = maxU * p.precio;
+          const vueltoP = m - totalP;
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setPresupuesto(null)}>
+              <div className="w-full max-w-md rounded-card border border-line bg-surface p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <div className="mb-1 flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-display text-lg font-semibold text-ink">
+                    <Wallet className="h-5 w-5 text-accent" /> ¿Cuánto le alcanza?
+                  </div>
+                  <button onClick={() => setPresupuesto(null)} className="text-ink-faint hover:text-ink" aria-label="Cerrar">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="mb-3 text-sm text-ink-soft">
+                  {p.nombre} · {formatMoney(p.precio)} por {p.unidadBase.toLowerCase()}
+                </div>
+
+                <label className="mb-1 block text-xs text-ink-soft">El cliente tiene</label>
+                <input
+                  ref={montoRef}
+                  type="number"
+                  min="0"
+                  step="any"
+                  inputMode="decimal"
+                  value={monto}
+                  onChange={(e) => setMonto(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && maxU > 0) {
+                      e.preventDefault();
+                      agregarPresupuesto(p, maxU);
+                    }
+                  }}
+                  placeholder="200.00"
+                  className={`${inputBase} text-right tabular-nums`}
+                />
+
+                <div className="mt-4 rounded-control border border-line bg-canvas p-3 text-center">
+                  {m <= 0 ? (
+                    <span className="text-sm text-ink-faint">Escribe el monto para ver cuánto le alcanza.</span>
+                  ) : maxU <= 0 ? (
+                    <span className="text-sm text-rose-600 dark:text-rose-400">
+                      {p.existencia <= 0 ? 'Sin existencia.' : `No alcanza ni para un(a) ${p.unidadBase.toLowerCase()}.`}
+                    </span>
+                  ) : (
+                    <>
+                      <div className="font-display text-2xl font-bold text-ink tabular-nums">
+                        {formatNumber(maxU)} {p.unidadBase.toLowerCase()}
+                        {maxU === 1 ? '' : 's'}
+                      </div>
+                      <div className="mt-1 text-sm text-ink-soft tabular-nums">
+                        {formatMoney(totalP)} · vuelto {formatMoney(vueltoP)}
+                      </div>
+                      {!p.fraccionable && (
+                        <div className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+                          Este producto no se fracciona — verifica con el farmacéutico si se vende por unidad.
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => agregarPresupuesto(p, maxU)}
+                  disabled={maxU <= 0}
+                  className="brand-gradient mt-4 inline-flex w-full items-center justify-center gap-2 rounded-control px-6 py-3 text-base font-semibold text-white disabled:opacity-40"
+                >
+                  Agregar {maxU > 0 ? `${formatNumber(maxU)} ${p.unidadBase.toLowerCase()}${maxU === 1 ? '' : 's'}` : ''}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
       {/* Modal de anulación (Dueño/Administrador) */}
       {anulando && exito && (
