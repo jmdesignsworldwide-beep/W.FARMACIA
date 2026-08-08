@@ -58,7 +58,7 @@ export const NAV: NavGroup[] = [
   {
     titulo: 'Negocio',
     items: [
-      { href: '/finanzas', label: 'Finanzas', icon: 'TrendingUp', cap: 'ver_finanzas', proximamente: true },
+      { href: '/finanzas', label: 'Finanzas', icon: 'TrendingUp', cap: 'ver_finanzas' },
       { href: '/insights', label: 'Insights', icon: 'Sparkles', cap: 'ver_finanzas', proximamente: true },
       { href: '/empleados', label: 'Empleados', icon: 'Users', cap: 'gestionar_empleados' },
       { href: '/fiscal', label: 'Fiscal (NCF)', icon: 'FileText', cap: 'configurar_sistema' },

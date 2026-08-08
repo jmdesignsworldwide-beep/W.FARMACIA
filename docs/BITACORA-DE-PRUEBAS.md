@@ -554,3 +554,30 @@ Vercel en verde (Ready) en cada uno.
 
 ## 🔗 PR
 #41.
+
+---
+
+# TANDA 13 — PANEL FINANCIERO · 2026-08-08
+
+## ✅ Construido (PR #42) — sin migración (usa venta/venta_linea/movimiento/historial_costo/servicio)
+
+- **Página `/finanzas`** (solo **`ver_finanzas`** = Dueño/Admin, barrera de servidor):
+  **rentabilidad REAL** (ingresos − costo **congelado** del lote en
+  `venta_linea.costo_unitario_momento`, no ventas brutas) con margen %;
+  **capital dormido** (lotes de productos sin venta en >90 días, al costo) vs
+  inventario vivo; **ingreso recurrente** (crónicos activos); **rentabilidad por
+  categoría**; **erosión de margen por laboratorio** (subidas repetidas de costo
+  desde `historial_costo`); ingresos por **servicios** separados.
+
+## 🔬 Probado
+- `can(cajero, ver_finanzas)=false` (unit ya verificado) → el cajero/farmacéutico
+  no entran (redirige). `typecheck` / `lint` / `build` en verde.
+
+## ⚠️ Honesto / pendiente
+- **Pronóstico de flujo de caja** (por pagar vs por cobrar): depende del **fiado y
+  cuentas por pagar (Tanda 15)** — anotado en pantalla, aún no calculado.
+- El **capital dormido** usa "sin movimiento de venta en 90 días" como proxy de
+  "parado"; es correcto para el uso, no una valuación contable.
+
+## 🔗 PR
+#42.
