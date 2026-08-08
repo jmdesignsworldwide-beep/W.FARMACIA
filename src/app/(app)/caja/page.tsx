@@ -31,6 +31,7 @@ export default async function CajaPage() {
   await requireCapability('ver_operacion');
   const user = await getSessionUser();
   const puedeDespacharControlados = user ? can(user.role, 'despachar_controlados') : false;
+  const puedeAnular = user ? can(user.role, 'anular_ventas') : false;
   const supabase = createClient();
 
   // El catálogo se precarga UNA vez al abrir la caja: buscar nunca toca la red.
@@ -97,5 +98,11 @@ export default async function CajaPage() {
     };
   });
 
-  return <CajaCliente catalogo={catalogo} puedeDespacharControlados={puedeDespacharControlados} />;
+  return (
+    <CajaCliente
+      catalogo={catalogo}
+      puedeDespacharControlados={puedeDespacharControlados}
+      puedeAnular={puedeAnular}
+    />
+  );
 }

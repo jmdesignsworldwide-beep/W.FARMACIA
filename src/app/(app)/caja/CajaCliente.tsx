@@ -2,11 +2,11 @@
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeftRight, Banknote, Check, Loader2, Lock, MapPin, Package, Pill, ScanLine, ShieldCheck, ShoppingCart, Trash2, X } from 'lucide-react';
+import { ArrowLeftRight, Banknote, Check, Loader2, Lock, MapPin, Package, Pill, RotateCcw, ScanLine, ShieldCheck, ShoppingCart, Trash2, X } from 'lucide-react';
 import { BRAND } from '@/lib/tokens';
 import { formatMoney, formatNumber } from '@/lib/format';
 import { normaliza } from '@/lib/catalogos';
-import { cobrarEnEfectivo } from './actions';
+import { cobrarEnEfectivo, anularVenta } from './actions';
 
 export interface CatalogoItem {
   id: string;
@@ -55,9 +55,11 @@ function itbisLinea(precio: number, cantidad: number, exento: boolean): number {
 export function CajaCliente({
   catalogo,
   puedeDespacharControlados,
+  puedeAnular,
 }: {
   catalogo: CatalogoItem[];
   puedeDespacharControlados: boolean;
+  puedeAnular: boolean;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState('');
@@ -73,9 +75,16 @@ export function CajaCliente({
   const [recibido, setRecibido] = useState('');
   const [procesando, setProcesando] = useState(false);
   const [errorCobro, setErrorCobro] = useState<string | null>(null);
-  const [exito, setExito] = useState<{ vuelto: number; total: number } | null>(null);
+  const [exito, setExito] = useState<{ vuelto: number; total: number; ventaId: string } | null>(null);
   const idemRef = useRef<string>('');
   const recibidoRef = useRef<HTMLInputElement>(null);
+
+  // Anulación de la última venta (solo Dueño/Administrador)
+  const [anulando, setAnulando] = useState(false);
+  const [motivoAnul, setMotivoAnul] = useState('');
+  const [procAnul, setProcAnul] = useState(false);
+  const [errAnul, setErrAnul] = useState<string | null>(null);
+  const [anulada, setAnulada] = useState(false);
 
   const resultados = useMemo(() => {
     const t = normaliza(q).trim();
@@ -165,8 +174,9 @@ export function CajaCliente({
       recibido: recibidoNum,
       lineas: carrito.map((l) => ({ productoId: l.id, cantidad: l.cantidad })),
     });
-    if (res.ok) {
-      setExito({ vuelto: res.vuelto ?? 0, total: res.total ?? totales.total });
+    if (res.ok && res.ventaId) {
+      setExito({ vuelto: res.vuelto ?? 0, total: res.total ?? totales.total, ventaId: res.ventaId });
+      setAnulada(false);
       setCarrito([]);
       setCobrando(false);
       setProcesando(false);
@@ -175,6 +185,34 @@ export function CajaCliente({
     } else {
       setProcesando(false);
       setErrorCobro(res.error ?? 'No se pudo cobrar.');
+    }
+  }
+
+  function abrirAnulacion() {
+    if (!exito || !puedeAnular) return;
+    setMotivoAnul('');
+    setErrAnul(null);
+    setAnulando(true);
+  }
+
+  async function confirmarAnulacion() {
+    if (procAnul || !exito) return;
+    if (!motivoAnul.trim()) {
+      setErrAnul('La anulación exige un motivo.');
+      return;
+    }
+    setProcAnul(true);
+    setErrAnul(null);
+    const res = await anularVenta(exito.ventaId, motivoAnul.trim());
+    if (res.ok) {
+      setAnulando(false);
+      setProcAnul(false);
+      setAnulada(true);
+      setExito(null);
+      router.refresh(); // el stock volvió al lote
+    } else {
+      setProcAnul(false);
+      setErrAnul(res.error ?? 'No se pudo anular.');
     }
   }
 
@@ -436,6 +474,19 @@ export function CajaCliente({
           <div className="mb-2 flex items-center gap-2 rounded-control border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-700 dark:text-emerald-300">
             <Check className="h-4 w-4" /> Cobrado {formatMoney(exito.total)}
             {exito.vuelto > 0 && <span className="font-semibold">· Vuelto {formatMoney(exito.vuelto)}</span>}
+            {puedeAnular && (
+              <button
+                onClick={abrirAnulacion}
+                className="ml-auto inline-flex items-center gap-1 rounded-control border border-line px-2 py-0.5 text-xs text-ink-soft hover:text-rose-600 dark:hover:text-rose-400"
+              >
+                <RotateCcw className="h-3 w-3" /> Anular
+              </button>
+            )}
+          </div>
+        )}
+        {anulada && (
+          <div className="mb-2 flex items-center gap-2 rounded-control border border-rose-500/40 bg-rose-500/5 px-3 py-1.5 text-sm text-rose-700 dark:text-rose-300">
+            <RotateCcw className="h-4 w-4" /> Venta anulada · la mercancía volvió a su lote
           </div>
         )}
         {aviso && (
@@ -546,6 +597,49 @@ export function CajaCliente({
               {procesando ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
               {procesando ? 'Cobrando…' : 'Confirmar cobro'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de anulación (Dueño/Administrador) */}
+      {anulando && exito && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setAnulando(false)}>
+          <div className="w-full max-w-md rounded-card border border-line bg-surface p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center gap-2 font-display text-lg font-semibold text-ink">
+              <RotateCcw className="h-5 w-5 text-rose-500" /> Anular la última venta
+            </div>
+            <p className="mb-3 text-sm text-ink-soft">
+              La mercancía vuelve a su lote y queda registro permanente de la anulación. El motivo es obligatorio.
+            </p>
+            <textarea
+              autoFocus
+              value={motivoAnul}
+              onChange={(e) => setMotivoAnul(e.target.value)}
+              placeholder="Motivo de la anulación…"
+              rows={3}
+              className="w-full rounded-control border border-line bg-canvas px-3 py-2 text-ink outline-none focus:luminous"
+            />
+            {errAnul && (
+              <div className="mt-2 rounded-control border border-rose-500/40 bg-rose-500/5 px-3 py-1.5 text-xs text-rose-700 dark:text-rose-300">
+                {errAnul}
+              </div>
+            )}
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setAnulando(false)}
+                className="flex-1 rounded-control border border-line px-4 py-2.5 text-sm text-ink-soft hover:bg-canvas"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => void confirmarAnulacion()}
+                disabled={procAnul || !motivoAnul.trim()}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-control bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-40"
+              >
+                {procAnul ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                {procAnul ? 'Anulando…' : 'Anular venta'}
+              </button>
+            </div>
           </div>
         </div>
       )}
