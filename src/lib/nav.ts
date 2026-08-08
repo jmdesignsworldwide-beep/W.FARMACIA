@@ -66,6 +66,7 @@ export const NAV: NavGroup[] = [
       { href: '/empleados', label: 'Empleados', icon: 'Users', cap: 'gestionar_empleados' },
       { href: '/fiscal', label: 'Fiscal (NCF)', icon: 'FileText', cap: 'configurar_sistema' },
       { href: '/ajustes', label: 'Ajustes', icon: 'Settings', cap: 'configurar_sistema' },
+      { href: '/respaldo', label: 'Respaldo', icon: 'DatabaseBackup', cap: 'ver_operacion' },
     ],
   },
 ];
