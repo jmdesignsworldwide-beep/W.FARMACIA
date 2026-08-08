@@ -332,3 +332,28 @@ Vercel en verde (Ready) en cada uno.
 ## 🔗 PR
 
 #32.
+
+---
+
+# TANDA 9 — PROVEEDORES, RECEPCIÓN, CADENA DE FRÍO · 2026-08-08
+
+## ✅ Pieza 1 (PR #33) — Proveedores
+
+- **Migración `0029`** (**aplicada a producción**): `proveedor` con tipo
+  **laboratorio ≠ droguería** y la **política de devolución** (`acepta_devoluciones`,
+  `dias_minimos_vida_util_devolucion`, `condiciones`, `porcentaje_recuperacion`) —
+  la base del radar de vencimientos (Tanda 10). RLS+FORCE; gestiona Dueño/Admin.
+- **App `/proveedores`**: alta/edición con la política de devolución condicional.
+
+## 🔬 Probado
+- `0029` idempotente (3×) en local; RLS FORCE. **Aplicada a producción**. ✅
+- `typecheck` / `lint` / `build` en verde.
+
+## ⚠️ Pendiente (Tanda 9, piezas siguientes)
+- **Recepción** con conteo contra factura + discrepancias + ficha de cumplimiento
+  + deriva de costo.
+- **Cadena de frío** (temperatura, apagón, bloqueo de despacho de refrigerados).
+- **Préstamos entre farmacias** y **visitadores médicos** (muestras).
+
+## 🔗 PR
+#33.
