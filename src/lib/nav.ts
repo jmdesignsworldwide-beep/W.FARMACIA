@@ -52,7 +52,7 @@ export const NAV: NavGroup[] = [
       { href: '/visitadores', label: 'Visitadores', icon: 'Briefcase', cap: 'gestionar_inventario' },
       { href: '/compras', label: 'Compras', icon: 'ShoppingCart', cap: 'gestionar_inventario', proximamente: true },
       { href: '/encargos', label: 'Encargos', icon: 'ClipboardList', cap: 'ver_operacion' },
-      { href: '/delivery', label: 'Delivery', icon: 'Bike', cap: 'operar_delivery', proximamente: true },
+      { href: '/delivery', label: 'Delivery', icon: 'Bike', cap: 'operar_delivery' },
     ],
   },
   {
