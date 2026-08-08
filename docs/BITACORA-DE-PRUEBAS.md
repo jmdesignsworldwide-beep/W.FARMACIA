@@ -1035,3 +1035,44 @@ Pendiente (Parte 2 · Pieza A).
 
 ## 🔗 PR
 Pendiente (Parte 2 · Pieza B — cierra Parte 2).
+
+---
+
+# CIERRE MAESTRO · PARTE 3 · PIEZA A — REABASTECIMIENTO (mínimo + orden de compra) · 2026-08-08
+
+## ✅ Construido — migración `0039`
+
+- **Migración `0039`** (a producción, `HTTP 201`; idempotente 3× local):
+  `orden_compra` + `orden_compra_linea` + enum `estado_orden_compra`
+  (borrador/enviada/recibida_parcial/recibida/cancelada). `fecha_envio` es la base de
+  "cuánto tardó en llegar" (alimenta la ficha de cumplimiento, Pieza B). RLS: gestiona
+  inventario (Dueño/Admin/Farmacéutico); auditada.
+- **§3.1 Mínimo por producto (día uno)**: usa `producto.punto_reorden_manual` (ya
+  existía). En `/compras` se **configura el mínimo** por producto, con **sugerencia
+  inicial sin datos** (más barato → más unidades: <RD$50→24, <200→12, <800→6, resto 3).
+- **§3.1 Alerta de bajo de stock**: los productos con existencia **por debajo de su
+  mínimo** salen **agrupados por proveedor** (el proveedor del lote más reciente),
+  ordenados por urgencia (qué tan por debajo están).
+- **§3.2 Orden de compra en dos clics**: por proveedor, cantidad sugerida editable
+  (para llevar al doble del mínimo), **precio esperado** (último costo del lote), y
+  **"Pedir por WhatsApp"** con la orden pre-armada y legible. Estados: borrador →
+  enviada (registra `fecha_envio`) → recibida / cancelada.
+- **`/compras`** dejó de ser stub — nav encendido.
+
+## 🔬 Probado
+- **Prueba de vida** (Postgres local): crear orden + renglón, **marcar enviada** →
+  `estado=enviada`, `fecha_envio` no nula, 1 renglón. Artefactos `PRUEBA … OC` purgados.
+- `0039` idempotente 3×; `typecheck` / `lint` / `build` en verde; `/compras` compila.
+
+## ⚠️ Honesto / día noventa
+- El mínimo es **fijo** (día uno). El **punto de reorden dinámico** (velocidad de venta)
+  es el día noventa: se calcula cuando haya historia de ventas — misma pantalla, más
+  inteligencia. Hoy avisa con el mínimo que Wilkins pone; no inventa velocidad que no existe.
+- El **proveedor** de un producto se infiere del **lote más reciente**; si un producto
+  nunca se recibió por el sistema, cae en "Sin proveedor asignado" (se pide igual, se
+  elige el proveedor a mano al recibir).
+- La **recepción de la orden** (conteo contra factura) ya vive en `/recepcion`; enlazar
+  la orden con su recepción para cerrar el ciclo automáticamente queda para la Pieza B.
+
+## 🔗 PR
+Pendiente (Parte 3 · Pieza A).
