@@ -860,3 +860,56 @@ Pendiente (Tanda 18).
 
 ## 🔗 PR
 Pendiente (Tanda 19).
+
+---
+
+# TANDA 20 · PIEZA 1 — ELEVACIÓN: SEGURIDAD Y ENDURECIMIENTO · 2026-08-08
+
+## ✅ Auditoría de seguridad por rol (ataque por URL directa)
+
+- **Toda página** (`page.tsx`) tiene barrera de servidor: 28 rutas con
+  `requireCapability(...)` de la capacidad correcta; `/dashboard` y `/respaldo`
+  con `requireUser()` (ramifican por capacidad adentro). **0 rutas sin guardia.**
+- **Toda acción de escritura** (`actions.ts`) verifica **sesión + capacidad**, no
+  solo sesión — se auditó cada `export async function`. Casos que parecían flojos y
+  resultaron correctos: `/conteo` centraliza el permiso en `actor()`
+  (`can(role,'gestionar_inventario')`); `/catalogos` en `guardaRol(tipo)`; `/fiscal`
+  exige Dueño/Admin explícito. `signOut()` es abierto a propósito (cerrar sesión).
+- **RLS es el tercer muro**: el cliente del servidor usa la **llave ANON** (respeta
+  RLS). El único uso de `service_role` (`productos/actions.ts`) es un **rollback
+  interno** de un alta abortada — borra por el `id` que ese mismo servidor acaba de
+  crear, tras verificar `gestionar_inventario`. Documentado y acotado; no lee/escribe
+  a pedido del usuario. **Defensa en profundidad: página + acción + RLS.**
+
+## ✅ npm audit
+- **Antes**: 7 vulnerabilidades (6 high, **1 critical**). La crítica era el
+  **Authorization Bypass en el middleware de Next.js** (CVE-2025-29927) — directo al
+  corazón de una app con auth por middleware.
+- **Acción**: `next` 14.2.15 → **14.2.35** (dentro de la 14.x, sin ruptura) +
+  `npm audit fix` (js-yaml, nanoid). `typecheck`/`lint`/`build` en verde tras subir.
+- **Después**: **0 críticas.** Quedan 5 *high* que **solo cierra Next 16** (salto de
+  dos majors, exige React 19): 3 son de **eslint (solo dev**, no llegan a producción)
+  y 2 (`next`/`postcss`) son DoS/cache-confusion. **Honesto**: subir a Next 15/16 es
+  ruptura y se hace **con Marien probando**, no a ciegas en producción. Recomendado
+  como mantenimiento programado.
+
+## ✅ Supabase Advisors (Management API)
+- **Seguridad**:
+  - 3× "SECURITY DEFINER ejecutable por authenticated": son **RPC intencionales** que
+    el POS llama (`siguiente_ncf`, `alergias_en_conflicto`, `candidatos_cronicos`).
+    Se verificó que **las tres fijan `search_path=public, pg_temp`** — el vector real
+    de inyección de `SECURITY DEFINER` está cerrado. **Aceptadas por diseño.**
+  - 1× "leaked password protection (HIBP)": intenté activarla por API → **HTTP 402
+    (requiere plan Pro)**. Se **recomienda activarla** cuando el proyecto suba a Pro
+    (bloquea contraseñas filtradas en registro/cambio, gratis en seguridad).
+- **Rendimiento** (todo INFO): 89× "unused_index" es **ruido en una base sin tráfico**
+  (ningún índice se ha usado porque aún no hay ventas — borrarlos sería un error);
+  55× "unindexed_foreign_keys" es mejora de baja prioridad a escala de barrio. Se
+  anota, no se toca por tocar.
+
+## ✅ Crédito del creador
+- Pie discreto en la barra lateral: **"Hecho por JM Nexus Designs"**, **único enlace
+  externo** de la app, y **solo al Instagram** (`BRAND.makerInstagram`).
+
+## 🔗 PR
+Pendiente (Tanda 20 · Pieza 1).

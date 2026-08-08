@@ -118,4 +118,7 @@ export const BRAND = {
   currency: 'DOP',
   currencySymbol: 'RD$',
   itbisRate: 0.18, // ITBIS 18% (§2.6)
+  // Crédito del creador. El único enlace externo permitido es el Instagram (§8).
+  maker: 'JM Nexus Designs',
+  makerInstagram: 'https://www.instagram.com/jmnexusdesigns',
 } as const;
