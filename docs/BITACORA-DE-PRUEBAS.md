@@ -1233,3 +1233,40 @@ Pendiente (Parte 4.2).
 
 ## 🔗 PR
 Pendiente (Parte 4.3).
+
+---
+
+# CIERRE MAESTRO · PARTE 4.4 — RESPALDO HONESTO · 2026-08-08
+
+## ✅ Construido — sin migración
+
+- **`docs/RESPALDO-Y-RESTAURACION.md`**: documento honesto que distingue **los dos
+  respaldos** — (A) el **automático diario de Supabase** (plataforma; PITR en Pro) y
+  (B) la **exportación CSV** de la app (tu copia en Excel) — con una tabla de **qué
+  respalda cada uno y qué NO**, e **instrucciones de restauración paso a paso, en
+  cristiano** (restaurar todo desde Supabase; reimportar una tabla desde el CSV).
+- **Export ampliado a las tablas críticas**: además de las que ya estaban, `/respaldo`
+  ahora baja **movimientos de inventario** (kardex), **comprobantes fiscales** (NCF +
+  notas de crédito B04), y el **libro de controlados** — cada uno con su barrera de
+  capacidad en el servidor.
+- **La pantalla `/respaldo`** dice la verdad: explica que Supabase respalda automático
+  por su lado y que el CSV es la copia en la mano, y apunta al documento de restauración.
+
+## 🔬 Probado — "un respaldo que nunca se restauró no es un respaldo"
+- **Prueba de restauración real** (Postgres local): ciclo **exportar → vaciar → restaurar**
+  con datos que incluían **comas y comillas**:
+  - Antes: **3** renglones → tras vaciar: **0** → **tras restaurar: 3**, suma **115.50**
+    intacta, y el renglón `PRUEBA con, coma y "comillas"` volvió **idéntico**. ✔
+- `typecheck` / `lint` / `build` en verde; `/respaldo` y `/export/[recurso]` compilan.
+
+## ⚠️ Honesto
+- **La exportación NO es un cron automático dentro de la app.** El respaldo automático
+  de verdad es el de **Supabase** (documentado); el CSV se baja **a demanda** (se
+  recomienda semanal, escrito en el documento). Montar un cron de export a un archivo
+  externo es tarea de plataforma/ops — se documentó el porqué y la rutina, en vez de
+  fingir un "respaldo automático de la app" que no existe.
+- El **aviso al Dueño** de "toca bajar el respaldo" es la rutina escrita, no una
+  notificación push (el sistema de notificaciones no está en alcance de esta pieza).
+
+## 🔗 PR
+Pendiente (Parte 4.4 — cierra Parte 4).

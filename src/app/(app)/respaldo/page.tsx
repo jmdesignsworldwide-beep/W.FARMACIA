@@ -13,10 +13,13 @@ interface Exportable {
 
 const EXPORTS: Exportable[] = [
   { recurso: 'inventario', titulo: 'Inventario', descripcion: 'Existencias por lote, con costo, precio y vencimiento.', cap: 'gestionar_inventario' },
+  { recurso: 'movimientos', titulo: 'Movimientos de inventario', descripcion: 'El kardex completo: cada entrada y salida con su motivo.', cap: 'gestionar_inventario' },
   { recurso: 'ventas', titulo: 'Ventas', descripcion: 'Todas las ventas con subtotal, ITBIS, total y estado.', cap: 'ver_finanzas' },
+  { recurso: 'comprobantes', titulo: 'Comprobantes fiscales (NCF)', descripcion: 'NCF emitidos, notas de crédito B04 y sus referencias.', cap: 'ver_finanzas' },
   { recurso: 'clientes', titulo: 'Clientes', descripcion: 'Expediente: nombre, teléfono, cédula, dirección.', cap: 'ver_operacion' },
   { recurso: 'fiado', titulo: 'Fiado (por cobrar)', descripcion: 'Saldos abiertos por cliente.', cap: 'ver_operacion' },
   { recurso: 'por-pagar', titulo: 'Cuentas por pagar', descripcion: 'Lo pendiente con las droguerías.', cap: 'ver_finanzas' },
+  { recurso: 'libro-controlado', titulo: 'Libro de controlados', descripcion: 'El libro inviolable de despachos de controlados.', cap: 'despachar_controlados' },
 ];
 
 export default async function RespaldoPage() {
@@ -57,6 +60,16 @@ export default async function RespaldoPage() {
           ))}
         </div>
       )}
+
+      <div className="rounded-card border border-line bg-surface p-4 text-sm text-ink-soft">
+        <div className="mb-1 font-medium text-ink">¿Y el respaldo automático?</div>
+        <p>
+          Supabase (la plataforma donde vive tu base) hace <strong>respaldos automáticos diarios</strong> de todo el
+          sistema por su lado. Lo de esta pantalla es <strong>tu copia en Excel</strong>, para tenerla en tu mano cuando
+          quieras. Cómo se restaura, en cristiano y paso a paso, está en{' '}
+          <code>docs/RESPALDO-Y-RESTAURACION.md</code>.
+        </p>
+      </div>
 
       <p className="text-xs text-ink-faint">
         La carpeta de inspección DIGEMAPS ya imprime en PDF desde su propia pantalla. El export tabular vive aquí.
