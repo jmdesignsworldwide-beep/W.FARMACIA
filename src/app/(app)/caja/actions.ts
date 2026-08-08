@@ -144,10 +144,28 @@ export async function cobrarEnEfectivo(input: CobrarEfectivoInput): Promise<Cobr
   const recibido = Number(input.recibido ?? 0);
   if (recibido + 0.001 < total) return { error: 'El efectivo recibido no cubre el total.' };
 
+  // La venta pertenece al turno de caja abierto, si lo hay (Tanda 5).
+  const { data: cajaAbierta } = await supabase
+    .from('caja_sesion')
+    .select('id')
+    .eq('sucursal_id', SUCURSAL)
+    .eq('estado', 'abierta')
+    .limit(1)
+    .maybeSingle<{ id: string }>();
+
   // ── Escritura: venta → líneas + movimientos + descuento de lote → cobro ──
   const { data: ventaIns, error: eV } = await supabase
     .from('venta')
-    .insert({ empleado_id: user.id, sucursal_id: SUCURSAL, subtotal, itbis, descuento: 0, total, estado: 'completada' } as never)
+    .insert({
+      empleado_id: user.id,
+      sucursal_id: SUCURSAL,
+      caja_sesion_id: cajaAbierta?.id ?? null,
+      subtotal,
+      itbis,
+      descuento: 0,
+      total,
+      estado: 'completada',
+    } as never)
     .select('id')
     .single<{ id: string }>();
   if (eV || !ventaIns) return { error: 'No se pudo crear la venta.' };
