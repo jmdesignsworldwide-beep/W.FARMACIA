@@ -653,3 +653,50 @@ Vercel en verde (Ready) en cada uno.
 
 ## 🔗 PR
 Pendiente.
+
+---
+
+# TANDA 16 — DELIVERY (ENTREGAS A DOMICILIO) · 2026-08-08
+
+## ✅ Construido (PR pendiente) — migración `0037`
+
+- **Migración `0037`** (aplicada a producción vía Management API — `HTTP 201`,
+  verificada: tabla `entrega`, 3 políticas RLS, enum `estado_entrega`; probada
+  idempotente 3× en Postgres local): tabla **`entrega`** (destinatario, dirección,
+  referencia "la casa amarilla al lado del colmado", teléfono, motorista, estado,
+  contra_entrega + monto, cobrado + método, motivo de no entrega, sellos de tiempo).
+  Máquina de estados operativa (no inviolable), **auditada** en cada cambio.
+- **Página `/delivery`** con **dos caras según el rol**:
+  - **Mostrador** (Dueño/Admin/Farmacéutico/Cajero): crea la entrega (a nombre de,
+    dirección, referencia, teléfono, contra entrega + monto), **asigna/reasigna
+    motorista** desde la lista, y ve **en curso** + **cerradas recientes**.
+  - **Motorista**: ve **solo las suyas**; botones grandes (móvil) **Voy en camino →
+    Entregado / No pude**; **link a Google Maps**, **llamar** y **WhatsApp**; si es
+    contra entrega, confirma **cuánto cobró y cómo**.
+
+## 🔬 Probado (Postgres local, con RLS activa como rol `authenticated`)
+
+- **Aislamiento por motorista**: Moto A ve **1** entrega (la suya), **no** ve la de
+  Moto B (**0** filas). Puede mover **la suya** a `en_camino` (UPDATE 1); el intento
+  sobre **la ajena** afecta **0** filas (RLS la oculta). ✔
+- `0037` idempotente (enum con `if not exists`, tabla `if not exists`, políticas
+  `drop/create`); reaplicada 3× sin error.
+- `typecheck` / `lint` / `build` en verde; `/delivery` compila (5.58 kB).
+
+## ⚠️ Honesto / pendiente
+
+- **La entrega es logística sobre una venta ya cobrada en caja.** La **contra
+  entrega** registra en la propia entrega que el motorista cobró (monto + método);
+  ese **efectivo se cuadra en el arqueo de caja** cuando el motorista lo entrega —
+  no se crea un segundo asiento de `cobro` para no duplicar el dinero. Si mañana se
+  quiere "venta a domicilio sin pasar por caja", se conecta ahí (hueco dejado:
+  `entrega.venta_id`).
+- **Sin geolocalización en vivo** del motorista (fuera de alcance); el seguimiento
+  es por estado (pendiente / en camino / entregado / no entregada).
+- Artefactos de prueba: solo Postgres local (2 usuarios `@wfarmacia-test.local`,
+  perfiles y entregas `PRUEBA`). Entregas y perfiles **purgados**; los 2 `auth.users`
+  quedan retenidos por el FK del `audit_log` (inviolable — su corte se marca, no se
+  borra), y el DB local es efímero. **Nada tocó producción.**
+
+## 🔗 PR
+Pendiente.
