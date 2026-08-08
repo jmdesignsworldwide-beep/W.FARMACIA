@@ -18,13 +18,15 @@ export default async function RecepcionPage() {
 
   const { data: prodData } = await supabase
     .from('producto')
-    .select('id, nombre, precio_venta, lote ( costo_unitario, fecha_recepcion )')
+    .select('id, nombre, precio_venta, requiere_refrigeracion, forma:forma_farmaceutica_id ( requiere_refrigeracion ), lote ( costo_unitario, fecha_recepcion )')
     .is('eliminado_en', null)
     .order('nombre');
-  const productos: ProductoRec[] = ((prodData as unknown as Array<{ id: string; nombre: string; precio_venta: number | null; lote: Array<{ costo_unitario: number | null; fecha_recepcion: string | null }> }>) ?? []).map((p) => {
+  const productos: ProductoRec[] = ((prodData as unknown as Array<{ id: string; nombre: string; precio_venta: number | null; requiere_refrigeracion: boolean | null; forma: { requiere_refrigeracion: boolean | null } | null; lote: Array<{ costo_unitario: number | null; fecha_recepcion: string | null }> }>) ?? []).map((p) => {
     const lotesOrd = [...(p.lote ?? [])].sort((a, b) => (b.fecha_recepcion ?? '').localeCompare(a.fecha_recepcion ?? ''));
     const costoAnterior = lotesOrd.find((l) => l.costo_unitario != null)?.costo_unitario ?? null;
-    return { id: p.id, nombre: p.nombre, precio: Number(p.precio_venta ?? 0), costoAnterior: costoAnterior != null ? Number(costoAnterior) : null, busqueda: normaliza(p.nombre) };
+    // Refrigeración: override del producto; si es null, hereda de la forma farmacéutica.
+    const refri = p.requiere_refrigeracion ?? p.forma?.requiere_refrigeracion ?? false;
+    return { id: p.id, nombre: p.nombre, precio: Number(p.precio_venta ?? 0), costoAnterior: costoAnterior != null ? Number(costoAnterior) : null, requiereRefrigeracion: Boolean(refri), busqueda: normaliza(p.nombre) };
   });
 
   return <RecepcionCliente proveedores={proveedores} productos={productos} />;

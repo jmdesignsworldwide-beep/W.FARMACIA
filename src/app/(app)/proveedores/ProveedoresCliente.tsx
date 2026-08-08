@@ -18,6 +18,13 @@ export interface ProveedorItem {
   diasMinimosVidaUtil: number | null;
   condicionesDevolucion: string;
   porcentajeRecuperacion: number | null;
+  ficha?: {
+    compras: number;
+    desde: string | null;
+    completitudPct: number | null;
+    precioHonradoPct: number | null;
+    pendientePago: number;
+  } | null;
 }
 
 const TIPO_LABEL = { laboratorio: 'Laboratorio', drogueria: 'Droguería', ambos: 'Ambos' };
@@ -26,8 +33,38 @@ const inputBase = 'h-10 w-full rounded-control border border-line bg-canvas px-3
 
 const VACIO: ProveedorItem = {
   id: '', nombre: '', tipo: 'drogueria', contactoNombre: '', telefono: '', rnc: '', condicionesPago: '',
-  diasEntrega: null, aceptaDevoluciones: false, diasMinimosVidaUtil: null, condicionesDevolucion: '', porcentajeRecuperacion: null,
+  diasEntrega: null, aceptaDevoluciones: false, diasMinimosVidaUtil: null, condicionesDevolucion: '', porcentajeRecuperacion: null, ficha: null,
 };
+
+function fmtMoney(n: number): string {
+  return new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP' }).format(n);
+}
+
+/** Ficha de cumplimiento calculada de las recepciones (§3.4). Dice algo desde la 1ª compra. */
+function FichaCumplimiento({ f, prometidos }: { f: NonNullable<ProveedorItem['ficha']>; prometidos: number | null }) {
+  const Fila = ({ k, v, tono }: { k: string; v: string; tono?: string }) => (
+    <div className="flex items-center justify-between py-0.5 text-xs">
+      <span className="text-ink-faint">{k}</span>
+      <span className={tono ?? 'text-ink'}>{v}</span>
+    </div>
+  );
+  return (
+    <div className="mt-2 rounded-control border border-line bg-canvas px-3 py-2">
+      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
+        Cumplimiento · {f.compras} compra(s){f.desde ? ` · desde ${new Date(f.desde + 'T00:00:00').toLocaleDateString('es-DO', { month: 'short', year: 'numeric' })}` : ''}
+      </div>
+      {f.completitudPct != null && (
+        <Fila k="Completitud (llega lo pedido)" v={`${f.completitudPct}%`} tono={f.completitudPct >= 95 ? 'text-emerald-600 dark:text-emerald-400' : f.completitudPct >= 80 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'} />
+      )}
+      {f.precioHonradoPct != null && (
+        <Fila k="Honró la cotización" v={`${f.precioHonradoPct}%`} tono={f.precioHonradoPct >= 90 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'} />
+      )}
+      {prometidos != null && <Fila k="Entrega prometida" v={`${prometidos} día(s)`} />}
+      {f.pendientePago > 0 && <Fila k="Pendiente de pago" v={fmtMoney(f.pendientePago)} tono="text-rose-600 dark:text-rose-400" />}
+      <div className="mt-1 text-[10px] text-ink-faint">Días reales de entrega: se calculan al enlazar la orden con su recepción (mejora anotada).</div>
+    </div>
+  );
+}
 
 export function ProveedoresCliente({ proveedores }: { proveedores: ProveedorItem[] }) {
   const router = useRouter();
@@ -70,6 +107,7 @@ export function ProveedoresCliente({ proveedores }: { proveedores: ProveedorItem
                   </div>
                 </div>
                 <button onClick={() => setEditando(p)} className="rounded-control border border-line px-3 py-1.5 text-xs text-ink-soft hover:luminous">Editar</button>
+                {p.ficha && <div className="w-full"><FichaCumplimiento f={p.ficha} prometidos={p.diasEntrega} /></div>}
               </li>
             ))}
           </ul>

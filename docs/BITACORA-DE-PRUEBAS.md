@@ -1076,3 +1076,41 @@ Pendiente (Parte 2 · Pieza B — cierra Parte 2).
 
 ## 🔗 PR
 Pendiente (Parte 3 · Pieza A).
+
+---
+
+# CIERRE MAESTRO · PARTE 3 · PIEZA B — FICHA DE CUMPLIMIENTO + 3 ALERTAS DE RECEPCIÓN · 2026-08-08
+
+## ✅ Construido — sin migración (usa recepcion/recepcion_linea existentes)
+
+- **§3.4 Ficha de cumplimiento del proveedor — se calcula sola** de las recepciones:
+  en `/proveedores`, cada proveedor con compras muestra **# de compras** (desde cuándo),
+  **completitud** (llega lo pedido = Σrecibida/Σpedida), **honró la cotización**
+  (% de renglones con facturado ≤ cotizado), **entrega prometida** (días del expediente)
+  y **pendiente de pago** (de cuentas por pagar). Con **una compra ya dice algo**.
+- **§3.3 Las 3 alertas de recepción** en el momento exacto (en `/recepcion`, por renglón):
+  1. **Deriva de costo** — ya existía ("llegó X% más caro… sugerido RD$…").
+  2. **Vida útil corta** — **nuevo**: si el lote llega con ≤180 días hasta vencer,
+     avisa cuántos días trae y pregunta "¿aceptar?".
+  3. **Refrigerado** — **nuevo**: si el producto requiere refrigeración (override del
+     producto, o heredado de la forma farmacéutica), avisa verificar la cadena de frío.
+
+## 🔬 Probado
+- **Ficha (Postgres local)**: 2 renglones (pedí 10 recibí 8; pedí 10 recibí 10) →
+  **completitud 90%**; precios (50=50 honró; 44>40 no) → **honró 50%**. Coincide con
+  la lógica del código.
+- `typecheck` / `lint` / `build` en verde; `/proveedores` y `/recepcion` compilan.
+- La refrigeración usa `producto.requiere_refrigeracion ?? forma_farmaceutica.requiere_refrigeracion` (columnas verificadas en la base).
+
+## ⚠️ Honesto / día noventa
+- **Días reales de entrega**: se declara en la ficha que se calcularán **al enlazar la
+  orden de compra con su recepción** (hoy no hay ese enlace directo); no invento un
+  número que no puedo medir bien. Es el siguiente paso natural del ciclo orden→recepción.
+- **Rotación** ("su producto rota en 34 días") es **día noventa** — necesita velocidad
+  de venta acumulada; no se finge sin historia.
+- **Comparación entre proveedores del mismo producto**: la ficha por proveedor está;
+  el comparador lado a lado del mismo producto se apoya en `historial_costo`/lotes y
+  queda como mejora (dato disponible, vista pendiente).
+
+## 🔗 PR
+Pendiente (Parte 3 · Pieza B — cierra Parte 3).
