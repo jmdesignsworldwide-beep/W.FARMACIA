@@ -268,6 +268,8 @@ export interface ClienteIdentificado {
   nombre: string;
   telefono: string | null;
   alergias: string[];
+  consentimientoDatos: boolean;
+  aceptaMensajes: boolean;
 }
 
 /** Identifica al cliente por teléfono (el identificador de 3 segundos). */
@@ -279,11 +281,11 @@ export async function identificarCliente(telefono: string): Promise<{ cliente?: 
   const supabase = createClient();
   const { data: cli } = await supabase
     .from('cliente')
-    .select('id, nombre, telefono')
+    .select('id, nombre, telefono, consentimiento_datos, acepta_mensajes')
     .eq('telefono', tel)
     .is('eliminado_en', null)
     .limit(1)
-    .maybeSingle<{ id: string; nombre: string; telefono: string | null }>();
+    .maybeSingle<{ id: string; nombre: string; telefono: string | null; consentimiento_datos: boolean | null; acepta_mensajes: boolean | null }>();
   if (!cli) return { error: 'No hay cliente con ese teléfono.' };
 
   const { data: al } = await supabase
@@ -294,7 +296,33 @@ export async function identificarCliente(telefono: string): Promise<{ cliente?: 
     .map((a) => a.familia?.nombre ?? a.principio?.nombre)
     .filter((n): n is string => Boolean(n));
 
-  return { cliente: { id: cli.id, nombre: cli.nombre, telefono: cli.telefono, alergias } };
+  return {
+    cliente: {
+      id: cli.id, nombre: cli.nombre, telefono: cli.telefono, alergias,
+      consentimientoDatos: Boolean(cli.consentimiento_datos),
+      aceptaMensajes: cli.acepta_mensajes ?? true,
+    },
+  };
+}
+
+/** Registra (o revoca) el consentimiento de datos y la preferencia de mensajes (Ley 172-13, §2.6). */
+export async function registrarConsentimiento(
+  clienteId: string,
+  input: { consentimiento: boolean; aceptaMensajes: boolean },
+): Promise<{ ok?: true; error?: string }> {
+  const user = await getSessionUser();
+  if (!user || !can(user.role, 'ver_operacion')) return { error: 'No autorizado.' };
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('cliente')
+    .update({
+      consentimiento_datos: input.consentimiento,
+      consentimiento_en: new Date().toISOString(),
+      acepta_mensajes: input.aceptaMensajes,
+    } as never)
+    .eq('id', clienteId);
+  if (error) return { error: 'No se pudo guardar el consentimiento.' };
+  return { ok: true };
 }
 
 export interface ConflictoAlergia {

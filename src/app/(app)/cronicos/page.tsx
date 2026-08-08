@@ -23,18 +23,19 @@ export default async function CronicosPage() {
 
   const { data: act } = await supabase
     .from('tratamiento_cronico')
-    .select('id, ciclo_dias, ultima_compra, proxima_fecha, estado, cliente:cliente_id ( nombre, telefono ), principio:principio_activo_id ( nombre )')
+    .select('id, ciclo_dias, ultima_compra, proxima_fecha, estado, cliente:cliente_id ( nombre, telefono, acepta_mensajes ), principio:principio_activo_id ( nombre )')
     .eq('estado', 'activo')
     .order('proxima_fecha', { nullsFirst: false });
 
   const activos: ActivoItem[] = ((act as unknown as Array<Record<string, unknown>>) ?? [])
     .map((t) => {
-      const cli = t.cliente as { nombre?: string; telefono?: string | null } | null;
+      const cli = t.cliente as { nombre?: string; telefono?: string | null; acepta_mensajes?: boolean | null } | null;
       const est = estadoDe((t.proxima_fecha as string) ?? null);
       return {
         id: String(t.id),
         cliente: cli?.nombre ?? '—',
-        telefono: cli?.telefono ?? null,
+        // §2.6 opt-out: si el cliente NO acepta mensajes, no exponemos su teléfono para WhatsApp.
+        telefono: (cli?.acepta_mensajes ?? true) ? (cli?.telefono ?? null) : null,
         principio: (t.principio as { nombre?: string } | null)?.nombre ?? '—',
         cicloDias: Number(t.ciclo_dias),
         proximaFecha: (t.proxima_fecha as string) ?? null,
