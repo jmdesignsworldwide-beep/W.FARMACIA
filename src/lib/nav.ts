@@ -50,7 +50,7 @@ export const NAV: NavGroup[] = [
       { href: '/recepcion', label: 'Recepción', icon: 'PackagePlus', cap: 'gestionar_inventario' },
       { href: '/prestamos', label: 'Préstamos', icon: 'Handshake', cap: 'gestionar_inventario' },
       { href: '/visitadores', label: 'Visitadores', icon: 'Briefcase', cap: 'gestionar_inventario' },
-      { href: '/compras', label: 'Compras', icon: 'ShoppingCart', cap: 'gestionar_inventario', proximamente: true },
+      { href: '/compras', label: 'Compras', icon: 'ShoppingCart', cap: 'gestionar_inventario' },
       { href: '/encargos', label: 'Encargos', icon: 'ClipboardList', cap: 'ver_operacion' },
       { href: '/delivery', label: 'Delivery', icon: 'Bike', cap: 'operar_delivery' },
     ],
