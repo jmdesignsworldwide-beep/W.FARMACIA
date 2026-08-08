@@ -964,6 +964,9 @@ export function CajaCliente({
                 {procAlergia ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Despachar con confirmación
               </button>
             </div>
+            <p className="mt-3 text-[11px] leading-relaxed text-ink-faint">
+              Este sistema es una herramienta de información. No sustituye el criterio del profesional farmacéutico. La decisión de dispensación corresponde al personal autorizado.
+            </p>
           </div>
         </div>
       )}

@@ -960,3 +960,43 @@ fija; el seed existía pero nadie lo leía. Se corrigió de verdad en esta pieza
 
 ## 🔗 PR
 Pendiente (Tanda 20 · Pieza 2 — cierra Tanda 20 y la corrida T4–T20).
+
+---
+
+# CIERRE MAESTRO · PARTE 2 · PIEZA A — CORRECCIÓN LEGAL (mensajes, disclaimers, receta física) · 2026-08-08
+
+## ✅ Construido — sin migración
+
+- **§2.1 Receta física en mano** (controlados): casilla **obligatoria** "Tengo la
+  receta física en mano" + regla visible ("una foto nunca habilita el despacho").
+  **Doble barrera**: el botón se deshabilita sin la casilla **y** `despacharControlado`
+  la exige en el servidor (`recetaFisica` → error si falta).
+- **§2.2 Ningún mensaje nombra el medicamento**: los textos de WhatsApp de
+  **crónicos** (`le recordamos su ${principio}` → *"Le recordamos su visita pendiente"*)
+  y **encargos** (`llegó lo que encargó (${producto})` → *"Su pedido ya está listo"*)
+  ahora son **neutros**. La pantalla interna sigue mostrando el producto al personal;
+  lo que **sale por WhatsApp** ya no revela condición de salud (Ley 172-13).
+- **§2.4 Presión/glucosa sin interpretación**: servicios **ya** registraba valores sin
+  semáforos ni juicios; se añadió el aviso *"Este registro es informativo… Consulte a
+  su médico."*
+- **§2.5 Patrón como dato, no juicio**: el aviso de controlados pasó de *"⚠️ Patrón…
+  revísalo"* a *"Nota: este paciente ya adquirió este mismo controlado recientemente.
+  Revísalo — la decisión es tuya."* (solo lo ve el farmacéutico; nunca bloquea).
+- **§2.7 Aviso legal en toda pantalla clínica**: componente `AvisoClinico` en
+  **controlados**, **equivalencias**, **servicios** y el **modal de alergia** del POS.
+
+## 🔬 Probado
+- `typecheck` / `lint` / `build` en verde; `/controlados` y `/servicios` compilan.
+- Barrera servidor de receta física: `despacharControlado` devuelve error si
+  `recetaFisica` no viene (revisado en el código, además del gate de rol ya existente).
+
+## ⚠️ Honesto
+- **§2.3 (sugerencia clínica solo al farmacéutico)**: **no hay** función de
+  "recomiéndale un probiótico" en el sistema — no había nada que restringir. La alerta
+  cruzada de alergia (que sí ve el cajero) es una **salvaguarda de seguridad**, no una
+  sugerencia de venta, y debe seguir visible. Anotado, no fingido.
+- **§2.6 (consentimiento / Ley 172-13)** va en la **Pieza B** (requiere migración:
+  consentimiento por cliente + opción de no recibir mensajes + política de privacidad).
+
+## 🔗 PR
+Pendiente (Parte 2 · Pieza A).

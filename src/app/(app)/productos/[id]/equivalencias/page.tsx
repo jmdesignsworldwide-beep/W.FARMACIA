@@ -5,6 +5,7 @@ import { requireCapability } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { LuminousCard } from '@/components/brand/LuminousCard';
 import { EmptyState } from '@/components/brand/EmptyState';
+import { AvisoClinico } from '@/components/legal/AvisoClinico';
 import { formatConcentracion } from '@/lib/producto';
 
 export const dynamic = 'force-dynamic';
@@ -163,6 +164,8 @@ export default async function EquivalenciasPage({ params }: { params: { id: stri
       >
         <ArrowLeft size={16} /> Productos
       </Link>
+
+      <div className="mt-3"><AvisoClinico /></div>
 
       {/* Producto base: qué estás resolviendo en el mostrador */}
       <LuminousCard neutral className="mt-3">

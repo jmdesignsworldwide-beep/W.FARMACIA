@@ -14,6 +14,8 @@ export interface DespacharControladoInput {
   medicoExequatur: string;
   pacienteNombre: string;
   indicaciones: string;
+  /** Confirmación explícita del farmacéutico: la receta física está en mano (CIERRE §2.1). */
+  recetaFisica?: boolean;
 }
 
 export interface DespacharResultado {
@@ -31,6 +33,8 @@ export async function despacharControlado(input: DespacharControladoInput): Prom
   const cant = Number(input.cantidad);
   if (!(cant > 0)) return { error: 'La cantidad debe ser mayor que cero.' };
   if (!input.pacienteNombre.trim()) return { error: 'El paciente es obligatorio para un controlado.' };
+  // §2.1: el despacho con receta solo se completa con la receta física en mano. La foto nunca habilita.
+  if (!input.recetaFisica) return { error: 'El despacho exige la receta física en mano (no una foto).' };
 
   const supabase = createClient();
 

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Activity, Check, HeartPulse, Loader2, Syringe } from 'lucide-react';
 import { formatMoney } from '@/lib/format';
+import { AvisoClinico } from '@/components/legal/AvisoClinico';
 import { registrarServicio } from './actions';
 
 export interface ServicioItem {
@@ -82,6 +83,8 @@ export function ServiciosCliente({ servicios }: { servicios: ServicioItem[] }) {
         </div>
         <p className="mt-1 text-sm text-ink-soft">Inyección, presión, glucosa, curación. Ingreso real y la puerta del paciente crónico.</p>
       </div>
+
+      <AvisoClinico variante="servicio" />
 
       <div className={card}>
         <div className="mb-3 flex items-center gap-2 font-medium text-ink"><Syringe className="h-4 w-4 text-ink-faint" /> Registrar servicio</div>

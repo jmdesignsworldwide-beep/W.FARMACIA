@@ -85,7 +85,8 @@ export function EncargosCliente({ encargos }: { encargos: EncargoItem[] }) {
         {activos.length === 0 ? <p className="py-3 text-center text-sm text-ink-faint">Sin encargos activos.</p> : (
           <ul className="divide-y divide-line">
             {activos.map((e) => {
-              const wa = e.estado === 'llego' ? waLink(e.telefono, `Hola${e.cliente ? ' ' + e.cliente : ''}, llegó lo que encargó (${e.producto}). Puede pasar a buscarlo.`) : null;
+              // §2.2: el mensaje NO nombra el producto (dato de salud sensible, Ley 172-13).
+              const wa = e.estado === 'llego' ? waLink(e.telefono, `Buenos días${e.cliente ? ' ' + e.cliente : ''}. Su pedido de la farmacia ya está listo para recoger. Puede pasar cuando guste.`) : null;
               const sig = SIGUIENTE[e.estado];
               return (
                 <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
