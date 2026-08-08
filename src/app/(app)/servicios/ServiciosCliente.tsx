@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Activity, Check, HeartPulse, Loader2, Syringe } from 'lucide-react';
+import { useMemo } from 'react';
+import { Activity, Check, HeartPulse, Loader2, Syringe, Package, Plus, X } from 'lucide-react';
 import { formatMoney } from '@/lib/format';
+import { normaliza } from '@/lib/catalogos';
 import { AvisoClinico } from '@/components/legal/AvisoClinico';
-import { registrarServicio } from './actions';
+import { registrarServicio, agregarInsumoServicio, quitarInsumoServicio } from './actions';
 
 export interface ServicioItem {
   id: string;
@@ -16,6 +18,8 @@ export interface ServicioItem {
   nota: string | null;
   creadoEn: string;
 }
+export interface InsumoItem { id: string; tipo: string; cantidad: number; producto: string }
+export interface ProductoOpt { id: string; nombre: string }
 
 const TIPOS = [
   { v: 'inyeccion', l: 'Inyección' },
@@ -34,7 +38,15 @@ function resumenMedicion(tipo: string, r: Record<string, number>): string {
   return '';
 }
 
-export function ServiciosCliente({ servicios }: { servicios: ServicioItem[] }) {
+export function ServiciosCliente({
+  servicios, insumos = [], productos = [], puedeConfigurar = false, insumosDisponibles = true,
+}: {
+  servicios: ServicioItem[];
+  insumos?: InsumoItem[];
+  productos?: ProductoOpt[];
+  puedeConfigurar?: boolean;
+  insumosDisponibles?: boolean;
+}) {
   const router = useRouter();
   const [tipo, setTipo] = useState('presion_arterial');
   const [telefono, setTelefono] = useState('');
@@ -70,10 +82,13 @@ export function ServiciosCliente({ servicios }: { servicios: ServicioItem[] }) {
       setDia('');
       setGlu('');
       setNota('');
-      if (res.clienteCronico) setAviso('Registrado. Este paciente se mide seguido — considéralo como crónico en seguimiento.');
+      if (res.insumoAviso) setAviso(res.insumoAviso);
+      else if (res.clienteCronico) setAviso('Registrado. Este paciente se mide seguido — considéralo como crónico en seguimiento.');
       router.refresh();
     } else setAviso(res.error ?? 'No se pudo.');
   }
+
+  const insumosDelTipo = insumos.filter((i) => i.tipo === tipo);
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
@@ -128,8 +143,14 @@ export function ServiciosCliente({ servicios }: { servicios: ServicioItem[] }) {
         <button onClick={registrar} disabled={proc} className="brand-gradient mt-3 inline-flex items-center gap-2 rounded-control px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40">
           {proc ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Registrar
         </button>
-        <p className="mt-2 text-xs text-ink-faint">El descuento de insumos (jeringa, tiras) del inventario llega en la próxima pieza.</p>
+        {insumosDelTipo.length > 0 && (
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-ink-faint">
+            <Package className="h-3.5 w-3.5" /> Al registrar se descuentan del inventario: {insumosDelTipo.map((i) => `${i.producto} ×${i.cantidad}`).join(', ')}.
+          </p>
+        )}
       </div>
+
+      {puedeConfigurar && <ConfigInsumos insumos={insumos} productos={productos} disponible={insumosDisponibles} />}
 
       <div className={card}>
         <div className="mb-2 font-medium text-ink">Últimos servicios</div>
@@ -154,6 +175,97 @@ export function ServiciosCliente({ servicios }: { servicios: ServicioItem[] }) {
           </ul>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Config: qué insumos consume cada tipo de servicio (§5). Solo gestionar_inventario. */
+function ConfigInsumos({ insumos, productos, disponible }: { insumos: InsumoItem[]; productos: ProductoOpt[]; disponible: boolean }) {
+  const router = useRouter();
+  const [abierto, setAbierto] = useState(false);
+  const [tipo, setTipo] = useState('inyeccion');
+  const [q, setQ] = useState('');
+  const [prodId, setProdId] = useState('');
+  const [cant, setCant] = useState('1');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const resultados = useMemo(() => {
+    const t = normaliza(q).trim();
+    if (!t) return [];
+    return productos.filter((p) => normaliza(p.nombre).includes(t)).slice(0, 6);
+  }, [q, productos]);
+
+  const delTipo = insumos.filter((i) => i.tipo === tipo);
+
+  async function agregar() {
+    if (!prodId) { setError('Elige el insumo.'); return; }
+    setBusy(true); setError(null);
+    const res = await agregarInsumoServicio({ tipo: tipo as never, productoId: prodId, cantidad: Number(cant) || 1 });
+    setBusy(false);
+    if (res.ok) { setProdId(''); setQ(''); setCant('1'); router.refresh(); }
+    else setError(res.error ?? 'No se pudo.');
+  }
+  async function quitar(id: string) {
+    setBusy(true);
+    const res = await quitarInsumoServicio(id);
+    setBusy(false);
+    if (res.ok) router.refresh(); else setError(res.error ?? 'No se pudo.');
+  }
+
+  return (
+    <div className={card}>
+      <button onClick={() => setAbierto(!abierto)} className="flex w-full items-center justify-between text-left">
+        <span className="flex items-center gap-2 font-medium text-ink"><Package className="h-4 w-4 text-ink-faint" /> Insumos por servicio</span>
+        <span className="text-xs text-ink-faint">{abierto ? 'ocultar' : 'configurar'}</span>
+      </button>
+      {abierto && (
+        <div className="mt-3 space-y-3">
+          {!disponible && (
+            <div className="rounded-control border border-amber-500/40 bg-amber-500/5 px-3 py-1.5 text-xs text-amber-700 dark:text-amber-300">
+              Esta función necesita aplicar la migración <code>0042</code> en la base. Mientras tanto, los servicios se registran sin descontar insumos.
+            </div>
+          )}
+          <div>
+            <label className="mb-1 block text-xs text-ink-soft">Tipo de servicio</label>
+            <select value={tipo} onChange={(e) => setTipo(e.target.value)} className={inputBase}>
+              {TIPOS.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
+            </select>
+          </div>
+
+          {delTipo.length > 0 ? (
+            <ul className="divide-y divide-line text-sm">
+              {delTipo.map((i) => (
+                <li key={i.id} className="flex items-center justify-between py-1.5">
+                  <span className="text-ink">{i.producto} <span className="text-ink-faint">×{i.cantidad}</span></span>
+                  <button onClick={() => void quitar(i.id)} disabled={busy} className="text-ink-faint hover:text-rose-600 dark:hover:text-rose-400"><X className="h-4 w-4" /></button>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="text-xs text-ink-faint">Este servicio aún no descuenta ningún insumo.</p>}
+
+          <div className="rounded-control border border-line bg-canvas p-2">
+            <div className="relative">
+              <input value={q} onChange={(e) => { setQ(e.target.value); setProdId(''); }} placeholder="Buscar insumo (jeringa, algodón…)" className="h-9 w-full rounded-control border border-line bg-surface px-3 text-sm text-ink outline-none focus:luminous" />
+              {resultados.length > 0 && !prodId && (
+                <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-card border border-line bg-surface shadow-lg">
+                  {resultados.map((p) => (
+                    <button key={p.id} onClick={() => { setProdId(p.id); setQ(p.nombre); }} className="block w-full px-3 py-1.5 text-left text-sm text-ink hover:bg-accent/10">{p.nombre}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <label className="text-xs text-ink-soft">Cantidad</label>
+              <input type="number" min="0" step="any" value={cant} onChange={(e) => setCant(e.target.value)} className="h-9 w-20 rounded-control border border-line bg-surface px-2 text-right text-sm tabular-nums text-ink outline-none focus:luminous" />
+              <button onClick={() => void agregar()} disabled={busy || !prodId} className="inline-flex items-center gap-1.5 rounded-control bg-accent/10 px-3 py-1.5 text-sm text-ink disabled:opacity-40">
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Agregar
+              </button>
+            </div>
+          </div>
+          {error && <div className="rounded-control border border-rose-500/40 bg-rose-500/5 px-3 py-1.5 text-xs text-rose-700 dark:text-rose-300">{error}</div>}
+        </div>
+      )}
     </div>
   );
 }
