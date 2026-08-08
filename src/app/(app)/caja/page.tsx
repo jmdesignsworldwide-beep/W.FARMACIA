@@ -103,11 +103,22 @@ export default async function CajaPage() {
     };
   });
 
+  const { data: esperaData } = await supabase
+    .from('venta_en_espera')
+    .select('id, etiqueta, carrito, created_at')
+    .eq('sucursal_id', '00000000-0000-0000-0000-000000000001')
+    .order('created_at', { ascending: false })
+    .limit(20);
+  const enEspera = ((esperaData as unknown as Array<{ id: string; etiqueta: string | null; carrito: unknown; created_at: string }>) ?? [])
+    .map((r) => ({ id: r.id, etiqueta: r.etiqueta, lineas: Array.isArray(r.carrito) ? r.carrito : [], creadoEn: r.created_at }))
+    .filter((r) => r.lineas.length > 0);
+
   return (
     <CajaCliente
       catalogo={catalogo}
       puedeDespacharControlados={puedeDespacharControlados}
       puedeAnular={puedeAnular}
+      enEspera={enEspera}
     />
   );
 }
