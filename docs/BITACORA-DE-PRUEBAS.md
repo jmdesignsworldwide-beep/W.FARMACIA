@@ -257,12 +257,30 @@ Vercel en verde (Ready) en cada uno.
 - **NO probado end-to-end en preview** por el agente (requiere sembrar un cliente
   con alergia y una sesión con login); la lógica de detección sí está verificada.
 
+## ✅ Pieza 3 (PR #30) — tratamientos crónicos
+
+- **Migración `0026`** (**aplicada a producción**): `tratamiento_cronico` +
+  `public.candidatos_cronicos()` (detección automática de 3+ compras del mismo
+  principio).
+- **App `/cronicos`**: el sistema **propone** candidatos (con nº de compras e
+  intervalo promedio); el farmacéutico **confirma con un clic** (el ciclo se toma
+  del intervalo detectado). Activos con estado **al día / por vencer / atrasado**
+  (por `proxima_fecha`), **WhatsApp de un clic**, «Vino» (mueve la próxima fecha un
+  ciclo) y «Abandonó».
+
+## 🔬 Probado (base local)
+
+- `0026` idempotente (3×). Con 3 ventas de un cliente del mismo principio,
+  `candidatos_cronicos()` → *«Doña Ana · Ampicilina · 3 compras · cada ~31 días»*
+  (intervalo bien calculado: 61 días / 2 = 30.5 → 31). **Aplicada a producción**. ✅
+- `typecheck` / `lint` / `build` en verde.
+
 ## ⚠️ NO construido aún (Tanda 7)
 
-- **Crónicos** (detección automática, ciclo, atrasados, WhatsApp) y **servicios de
-  farmacia** (inyección/presión/glucosa) — piezas siguientes.
+- **Servicios de farmacia** (inyección/presión/glucosa que descuentan insumos +
+  historial de presión/glucosa) — pieza siguiente.
 
 ## 🔗 PRs
 
-#27 (Pieza 1 — esquema) · #29 (Pieza 2 — POS: identificación + alerta que interrumpe).
-Migraciones `0024`/`0025` **aplicadas a producción**.
+#27 (esquema) · #29 (POS + alerta) · #30 (crónicos). Migraciones `0024`–`0026`
+**aplicadas a producción**.
