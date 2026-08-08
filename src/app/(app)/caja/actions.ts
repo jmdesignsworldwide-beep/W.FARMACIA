@@ -22,6 +22,8 @@ export interface CobrarEfectivoInput {
   rnc?: string;
   /** Cliente identificado (opcional): la mayoría de ventas son anónimas. */
   clienteId?: string | null;
+  /** Fiado: si viene, la venta se cobra a crédito interno del pagador (no efectivo). */
+  fiado?: { nombre: string; telefono?: string };
 }
 
 export interface CobrarResultado {
@@ -148,8 +150,22 @@ export async function cobrarEnEfectivo(input: CobrarEfectivoInput): Promise<Cobr
   itbis = round2(itbis);
   const subtotal = round2(total - itbis);
 
+  const esFiado = Boolean(input.fiado?.nombre?.trim());
   const recibido = Number(input.recibido ?? 0);
-  if (recibido + 0.001 < total) return { error: 'El efectivo recibido no cubre el total.' };
+  if (!esFiado && recibido + 0.001 < total) return { error: 'El efectivo recibido no cubre el total.' };
+
+  // Fiado: resolver (o crear) el pagador a crédito.
+  let pagadorId: string | null = null;
+  if (esFiado) {
+    const nombre = input.fiado!.nombre.trim();
+    const tel = input.fiado!.telefono?.trim() || null;
+    const { data: existente } = await supabase.from('pagador').select('id').eq('nombre', nombre).eq('activo', true).limit(1).maybeSingle<{ id: string }>();
+    if (existente) pagadorId = existente.id;
+    else {
+      const { data: nuevo } = await supabase.from('pagador').insert({ tipo: 'cliente', nombre, telefono: tel, a_credito: true } as never).select('id').single<{ id: string }>();
+      pagadorId = nuevo?.id ?? null;
+    }
+  }
 
   // La venta pertenece al turno de caja abierto, si lo hay (Tanda 5).
   const { data: cajaAbierta } = await supabase
@@ -210,7 +226,13 @@ export async function cobrarEnEfectivo(input: CobrarEfectivoInput): Promise<Cobr
     }
   }
 
-  await supabase.from('cobro').insert({ venta_id: ventaId, metodo: 'efectivo', monto: total, referencia: refIdem } as never);
+  await supabase.from('cobro').insert({
+    venta_id: ventaId,
+    metodo: esFiado ? 'credito_interno' : 'efectivo',
+    monto: total,
+    pagador_id: pagadorId,
+    referencia: refIdem,
+  } as never);
 
   // Comprobante fiscal: RNC → B01 (crédito fiscal); si no, B02 (consumidor final).
   // Si no hay secuencia configurada, la venta NO se bloquea: queda sin NCF y se avisa.

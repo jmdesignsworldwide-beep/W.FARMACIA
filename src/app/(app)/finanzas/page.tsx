@@ -1,7 +1,7 @@
 import { requireCapability } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { formatMoney, formatNumber } from '@/lib/format';
-import { TrendingUp, Moon, HeartPulse, Factory } from 'lucide-react';
+import { TrendingUp, Moon, HeartPulse, Factory, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -88,6 +88,20 @@ export default async function FinanzasPage() {
   const labs = [...porLab.entries()].filter(([, v]) => v.subidas >= 2).sort((a, b) => b[1].suma - a[1].suma).slice(0, 5);
   const categorias = [...porCategoria.entries()].map(([k, v]) => ({ cat: k, margen: v.ingreso - v.costo, ingreso: v.ingreso })).sort((a, b) => b.margen - a.margen).slice(0, 6);
 
+  // ── Pronóstico de flujo de caja: por cobrar (fiado) vs por pagar (Tanda 15) ──
+  const { data: cobrosCred } = await supabase.from('cobro').select('monto').eq('metodo', 'credito_interno');
+  const fiadoBruto = ((cobrosCred as unknown as Array<{ monto: number }>) ?? []).reduce((s, c) => s + Number(c.monto), 0);
+  const { data: abonosAll } = await supabase.from('abono').select('monto');
+  const abonadoBruto = ((abonosAll as unknown as Array<{ monto: number }>) ?? []).reduce((s, a) => s + Number(a.monto), 0);
+  const porCobrar = Math.max(0, fiadoBruto - abonadoBruto);
+
+  const hoyStr = new Date().toISOString().slice(0, 10);
+  const { data: cxpPend } = await supabase.from('cuenta_por_pagar').select('monto, fecha_vencimiento').eq('estado', 'pendiente');
+  const cxpRows = (cxpPend as unknown as Array<{ monto: number; fecha_vencimiento: string | null }>) ?? [];
+  const porPagar = cxpRows.reduce((s, c) => s + Number(c.monto), 0);
+  const porPagarVencido = cxpRows.filter((c) => c.fecha_vencimiento && c.fecha_vencimiento < hoyStr).reduce((s, c) => s + Number(c.monto), 0);
+  const posicionNeta = porCobrar - porPagar;
+
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-4">
       <div>
@@ -125,7 +139,25 @@ export default async function FinanzasPage() {
         )}
       </div>
 
-      <p className="text-xs text-ink-faint">El pronóstico de flujo de caja (por pagar vs. por cobrar) se activa con el fiado y las cuentas por pagar (Tanda 15).</p>
+      <div className={card}>
+        <div className="mb-3 font-medium text-ink">Pronóstico de flujo de caja</div>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+          <div className="rounded-card border border-line bg-canvas p-3">
+            <div className="flex items-center gap-1 text-xs text-ink-faint"><ArrowDownCircle className="h-3 w-3 text-emerald-500" /> Por cobrar (fiado)</div>
+            <div className="font-display text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{formatMoney(porCobrar)}</div>
+          </div>
+          <div className="rounded-card border border-line bg-canvas p-3">
+            <div className="flex items-center gap-1 text-xs text-ink-faint"><ArrowUpCircle className="h-3 w-3 text-rose-500" /> Por pagar (droguerías)</div>
+            <div className="font-display text-2xl font-bold text-rose-600 dark:text-rose-400 tabular-nums">{formatMoney(porPagar)}</div>
+            {porPagarVencido > 0 && <div className="text-xs text-rose-500">{formatMoney(porPagarVencido)} ya vencido</div>}
+          </div>
+          <div className="rounded-card border border-line bg-canvas p-3">
+            <div className="text-xs text-ink-faint">Posición neta</div>
+            <div className={`font-display text-2xl font-bold tabular-nums ${posicionNeta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{formatMoney(posicionNeta)}</div>
+            <div className="text-xs text-ink-faint">{posicionNeta >= 0 ? 'te deben más de lo que debes' : 'debes más de lo que te deben'}</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
