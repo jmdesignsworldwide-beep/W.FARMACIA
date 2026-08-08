@@ -738,3 +738,38 @@ Pendiente.
 
 ## 🔗 PR
 Pendiente (Tanda 17 · Pieza 1).
+
+---
+
+# TANDA 17 · PIEZA 2 — EXPORT / RESPALDO (CSV) · 2026-08-08
+
+## ✅ Construido (PR pendiente) — SIN migración
+
+- **Route handler `GET /export/[recurso]`** (primer route handler del proyecto):
+  descarga **CSV con BOM** (Excel/Sheets respetan los acentos) para cinco recursos,
+  cada uno con su **barrera de capacidad en el servidor**:
+  - `inventario` (gestionar_inventario), `ventas` (ver_finanzas),
+    `clientes` (ver_operacion), `fiado` (ver_operacion),
+    `por-pagar` (ver_finanzas).
+  - Autoriza con `getSessionUser()` + `can()`; 401 sin sesión, 403 sin permiso,
+    404 recurso inválido. `Content-Disposition: attachment` con nombre y fecha.
+- **Página `/respaldo`**: lista de descargas **filtrada por el rol** (cada quien ve
+  solo lo que su capacidad permite bajar).
+
+## 🔬 Probado
+- **Escapado CSV** (node): campo con coma → entre comillas; comillas internas
+  duplicadas; salto de línea → entre comillas; `null` → vacío; **BOM** presente.
+  Abre limpio en Excel con acentos. ✔
+- `typecheck` / `lint` / `build` en verde; `/export/[recurso]` y `/respaldo` compilan.
+
+## ⚠️ Honesto / pendiente
+- **Es CSV, no `.xlsx` binario.** Abre nativo en Excel/Sheets y es lo que una
+  farmacia necesita; un `.xlsx` con formato/colores exigiría una librería y no
+  aporta al respaldo. **PDF**: la carpeta DIGEMAPS ya imprime; el resto de reportes
+  se imprime desde el navegador (Ctrl+P) — un generador PDF server-side no se
+  construyó (fuera de lo que pide el respaldo de datos).
+- El export trae **hasta 5.000 filas** por recurso (tope de seguridad); una farmacia
+  de barrio no lo alcanza en años, pero se anota el corte.
+
+## 🔗 PR
+Pendiente (Tanda 17 · Pieza 2 — cierra Tanda 17).
