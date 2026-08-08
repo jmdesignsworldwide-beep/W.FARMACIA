@@ -2,11 +2,22 @@
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeftRight, Banknote, Check, Loader2, Lock, MapPin, Package, PauseCircle, Pill, RotateCcw, ScanLine, ShieldCheck, ShoppingCart, Trash2, Wallet, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeftRight, Banknote, Check, Loader2, Lock, MapPin, Package, PauseCircle, Pill, RotateCcw, ScanLine, ShieldAlert, ShieldCheck, ShoppingCart, Trash2, User, Wallet, X } from 'lucide-react';
 import { BRAND } from '@/lib/tokens';
 import { formatMoney, formatNumber } from '@/lib/format';
 import { normaliza } from '@/lib/catalogos';
-import { cobrarEnEfectivo, anularVenta, aparcarVenta, retomarEnEspera, type CarritoEnEspera } from './actions';
+import {
+  cobrarEnEfectivo,
+  anularVenta,
+  aparcarVenta,
+  retomarEnEspera,
+  identificarCliente,
+  revisarAlergias,
+  registrarDecisionAlergia,
+  type CarritoEnEspera,
+  type ClienteIdentificado,
+  type ConflictoAlergia,
+} from './actions';
 
 export interface CatalogoItem {
   id: string;
@@ -89,6 +100,15 @@ export function CajaCliente({
   const [monto, setMonto] = useState('');
   const montoRef = useRef<HTMLInputElement>(null);
 
+  // Cliente + alerta cruzada de alergia
+  const [cliente, setCliente] = useState<ClienteIdentificado | null>(null);
+  const [telCliente, setTelCliente] = useState('');
+  const [buscandoCli, setBuscandoCli] = useState(false);
+  const [conflictos, setConflictos] = useState<ConflictoAlergia[]>([]);
+  const [alertaAbierta, setAlertaAbierta] = useState(false);
+  const [motivoAlergia, setMotivoAlergia] = useState('');
+  const [procAlergia, setProcAlergia] = useState(false);
+
   // Venta en espera (F8)
   const [aparcando, setAparcando] = useState(false);
   const [etiqueta, setEtiqueta] = useState('');
@@ -161,8 +181,24 @@ export function CajaCliente({
   const recibidoNum = Number(recibido) || 0;
   const vuelto = recibidoNum - totales.total;
 
+  function abrirCobroReal() {
+    idemRef.current = nuevoId();
+    setRecibido('');
+    setRnc('');
+    setErrorCobro(null);
+    setExito(null);
+    setCobrando(true);
+    setTimeout(() => recibidoRef.current?.focus(), 50);
+  }
+
   function abrirCobro() {
     if (carrito.length === 0 || bloqueadoClinico) return;
+    // La alerta cruzada de alergia INTERRUMPE antes de cobrar.
+    if (conflictos.length > 0) {
+      setMotivoAlergia('');
+      setAlertaAbierta(true);
+      return;
+    }
     idemRef.current = nuevoId();
     setRecibido('');
     setRnc('');
@@ -221,6 +257,60 @@ export function CajaCliente({
     }
   }
 
+  async function identificar() {
+    const tel = telCliente.trim();
+    if (!tel) return;
+    setBuscandoCli(true);
+    const res = await identificarCliente(tel);
+    setBuscandoCli(false);
+    if (res.cliente) {
+      setCliente(res.cliente);
+      setTelCliente('');
+      setAviso(null);
+    } else {
+      setAviso(res.error ?? 'No encontrado.');
+    }
+  }
+
+  function limpiarCliente() {
+    setCliente(null);
+    setConflictos([]);
+  }
+
+  async function decidirAlergia(despachar: boolean) {
+    if (!cliente || procAlergia) return;
+    if (despachar && !motivoAlergia.trim()) return;
+    setProcAlergia(true);
+    await registrarDecisionAlergia(
+      cliente.id,
+      despachar ? 'despachado_con_confirmacion' : 'no_despachado',
+      motivoAlergia,
+      conflictos,
+    );
+    setProcAlergia(false);
+    setAlertaAbierta(false);
+    if (despachar) abrirCobroReal();
+    else setAviso('No despachado por la alerta de alergia (queda registrado quién decidió y por qué).');
+  }
+
+  // Revisar choques de alergia cuando cambia el cliente o el carrito.
+  useEffect(() => {
+    if (!cliente || carrito.length === 0) {
+      setConflictos([]);
+      return;
+    }
+    let cancel = false;
+    revisarAlergias(
+      cliente.id,
+      carrito.map((l) => l.id),
+    ).then((cs) => {
+      if (!cancel) setConflictos(cs);
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [cliente, carrito]);
+
   function agregarPresupuesto(it: CatalogoItem, n: number) {
     if (n <= 0) return;
     setCarrito((c) => {
@@ -261,6 +351,7 @@ export function CajaCliente({
       recibido: recibidoNum,
       lineas: carrito.map((l) => ({ productoId: l.id, cantidad: l.cantidad })),
       rnc: rnc.trim() || undefined,
+      clienteId: cliente?.id ?? null,
     });
     if (res.ok && res.ventaId) {
       setExito({ vuelto: res.vuelto ?? 0, total: res.total ?? totales.total, ventaId: res.ventaId, ncf: res.ncf ?? null });
@@ -367,6 +458,13 @@ export function CajaCliente({
         }
         return;
       }
+      if (alertaAbierta) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setAlertaAbierta(false);
+        }
+        return;
+      }
       if (e.key === 'F3') {
         e.preventDefault();
         abrirPresupuesto();
@@ -389,7 +487,7 @@ export function CajaCliente({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [carrito, query, cobrando, bloqueadoClinico, recibido, presupuesto, destacado, aparcando]);
+  }, [carrito, query, cobrando, bloqueadoClinico, recibido, presupuesto, destacado, aparcando, alertaAbierta, conflictos]);
 
   function onBuscarKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'ArrowDown') {
@@ -504,6 +602,51 @@ export function CajaCliente({
 
         {/* Derecha 40%: contexto */}
         <div className="min-h-0 overflow-auto rounded-card border border-line bg-surface p-4 lg:col-span-2">
+          <div className="mb-3 border-b border-line pb-3">
+            {cliente ? (
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 text-ink">
+                    <User className="h-4 w-4 text-ink-faint" /> <span className="truncate">{cliente.nombre}</span>
+                  </div>
+                  {cliente.alergias.length > 0 && (
+                    <div className="mt-0.5 text-xs text-rose-600 dark:text-rose-400">Alergias: {cliente.alergias.join(', ')}</div>
+                  )}
+                </div>
+                <button onClick={limpiarCliente} className="text-ink-faint hover:text-ink" aria-label="Quitar cliente">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input
+                  value={telCliente}
+                  onChange={(e) => setTelCliente(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void identificar();
+                    }
+                  }}
+                  placeholder="Teléfono del cliente (opcional)"
+                  className="h-9 flex-1 rounded-control border border-line bg-canvas px-3 text-sm text-ink outline-none focus:luminous"
+                />
+                <button
+                  onClick={() => void identificar()}
+                  disabled={buscandoCli || !telCliente.trim()}
+                  className="rounded-control border border-line px-3 py-1.5 text-xs text-ink-soft hover:luminous disabled:opacity-40"
+                >
+                  {buscandoCli ? '…' : 'Identificar'}
+                </button>
+              </div>
+            )}
+            {conflictos.length > 0 && (
+              <div className="mt-2 flex items-start gap-1.5 rounded-control border border-rose-500/50 bg-rose-500/10 px-2.5 py-1.5 text-xs text-rose-700 dark:text-rose-300">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>Posible reacción cruzada: {conflictos.map((c) => c.productoNombre).join(', ')}. Se confirma al cobrar.</span>
+              </div>
+            )}
+          </div>
           {destacado ? (
             <div className="space-y-3">
               <div>
@@ -731,6 +874,52 @@ export function CajaCliente({
               {procesando ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
               {procesando ? 'Cobrando…' : 'Confirmar cobro'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Alerta cruzada de alergia — INTERRUMPE */}
+      {alertaAbierta && cliente && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-card border border-rose-500/50 bg-surface p-5 shadow-xl">
+            <div className="mb-2 flex items-center gap-2 font-display text-lg font-semibold text-rose-700 dark:text-rose-300">
+              <ShieldAlert className="h-6 w-6" /> Posible reacción cruzada
+            </div>
+            <p className="text-sm text-ink">
+              <strong>{cliente.nombre}</strong> tiene una alergia registrada. Estos productos del carrito son de la misma familia:
+            </p>
+            <ul className="my-3 space-y-1">
+              {conflictos.map((c) => (
+                <li key={c.productoId} className="rounded-control border border-rose-500/30 bg-rose-500/5 px-3 py-1.5 text-sm text-ink">
+                  {c.productoNombre}
+                  {c.familia ? ` — familia ${c.familia}` : ''}
+                </li>
+              ))}
+            </ul>
+            <p className="text-sm text-ink-soft">No despachar sin confirmación del médico o del farmacéutico.</p>
+            <label className="mb-1 mt-3 block text-xs text-ink-soft">Motivo / decisión (obligatorio para despachar)</label>
+            <textarea
+              value={motivoAlergia}
+              onChange={(e) => setMotivoAlergia(e.target.value)}
+              rows={2}
+              className="w-full rounded-control border border-line bg-canvas px-3 py-2 text-ink outline-none focus:luminous"
+            />
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => void decidirAlergia(false)}
+                disabled={procAlergia}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-control bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-40"
+              >
+                No despachar
+              </button>
+              <button
+                onClick={() => void decidirAlergia(true)}
+                disabled={procAlergia || !motivoAlergia.trim()}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-control border border-line px-4 py-2.5 text-sm font-semibold text-ink hover:bg-canvas disabled:opacity-40"
+              >
+                {procAlergia ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Despachar con confirmación
+              </button>
+            </div>
           </div>
         </div>
       )}
