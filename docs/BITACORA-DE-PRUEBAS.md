@@ -109,3 +109,51 @@ las migraciones), el esquema queda listo para aplicar de un golpe.
 
 #16, #17, #18, #19, #20, #21 — todos mergeados a `main` por squash. Preview de
 Vercel en verde (Ready) en cada uno.
+
+---
+
+# TANDA 5 — CAJA DIARIA · 2026-08-08
+
+## ✅ Construido (PR #23)
+
+- **Migración `0021`**: `caja_sesion` (turno: monto inicial, cierre con diferencia
+  registrada, modo arranque + fecha de corte, cierre comparativo
+  `total_metodo_viejo`), `caja_arqueo` (conteo por denominación dominicana,
+  append-only), `caja_egreso` (motivo + autorización, append-only). RLS+FORCE en
+  las tres; FK `venta.caja_sesion_id`.
+- **App `/caja-diaria`**: abrir caja, resumen del turno (ventas, efectivo cobrado,
+  esperado en caja), egresos (solo Dueño/Admin autoriza), cierre con arqueo por
+  denominación + diferencia en vivo + cierre comparativo + notas, resumen
+  «¡Caja cuadrada!».
+- El **cobro del POS** ahora etiqueta la venta con el turno abierto.
+
+## 🔬 Probado (base local)
+
+- **Idempotencia `0021`**: cadena completa + re-aplicar **3×** sin error. ✅
+- **RLS+FORCE** en `caja_sesion`, `caja_arqueo`, `caja_egreso`. ✅
+- **Inviolabilidad**: `UPDATE` en `caja_egreso` **negado por la base**. ✅
+- **FK** `venta.caja_sesion_id → caja_sesion`. ✅
+- **Matemática del cierre**: turno inicial 1000 + venta efectivo 357 (enlazada) −
+  egreso 200 → **esperado 1157**; arqueo por denominación **1157** → **diferencia
+  0 (cuadra)**. La columna generada `subtotal = denominacion*cantidad` cuadra. ✅
+- **Estático**: `typecheck` / `lint` / `build` en verde.
+
+## 🛡️ Roles
+
+- **Egreso de caja**: `registrarEgreso` rechaza en servidor si el rol no es
+  Dueño/Administrador (el cajero opera la caja pero no autoriza salidas de
+  efectivo). Verificado por lógica (mismo patrón `can`/rol que la Tanda 4).
+
+## ⚠️ NO probado / pendiente
+
+- **Migración `0021` NO aplicada a producción — pendiente del PAT.** Hasta
+  aplicarla, `/caja-diaria` no funciona en el preview (faltan las tablas).
+- **End-to-end en preview** (abrir/cerrar con manos): no ejecutado (schema no
+  aplicado + sin sesión de login).
+- **Reconocimiento del empleado** («cuadró 14 días seguidos») e **historial de
+  turnos visible para el propio cajero**: no construidos aún (mejora de la vista).
+- **Prueba visual** 390px / temas: no ejecutada por el agente.
+
+## 🔗 PR
+
+#23 — mergeado a `main` por squash.
