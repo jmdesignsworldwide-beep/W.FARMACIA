@@ -109,10 +109,33 @@ Cada tanda que genere entradas de prueba actualiza este corte.
 |---|---|---|
 | jm.designs.worldwide@gmail.com | dueno | Cuenta real del Dueño. **No es artefacto de prueba.** Su clave provisional de setup debe **rotarse antes del go-live** (no dejarla como quedó en el arranque). |
 
+## 4bis. Tandas 4–20 — verificación en producción (2026-08-08)
+
+Durante las **Tandas 4 a 20** el patrón cambió: **toda prueba de datos se corrió en
+un Postgres local** (arnés `scripts/localdb-run.sh`), no contra producción. A
+producción solo se aplicaron **migraciones de esquema** (0021–0037, DDL) por el
+protocolo de PAT, más un seed de `configuracion` (umbral). **No se insertó ningún
+dato de prueba en producción.**
+
+**Auditoría de producción al cierre (2026-08-08), medida en vivo:**
+
+| Chequeo | Resultado |
+|---|---|
+| `producto` con prefijo `PRUEBA` | **1** — solo el `PRUEBA T3 Inviolabilidad` documentado (borrado suave, referenciado por libros inviolables) |
+| `principio_activo` `PRUEBA` | **0** |
+| `auth.users` `@wfarmacia-test.local` | **2** — los 2 inertes documentados de la Tanda 3 |
+| `profiles` totales | **1** — solo el Dueño (los 2 test users **sin perfil**) |
+| `entrega` / `abono` / `pagador` / `venta` / `cuenta_por_pagar` | **0 / 0 / 0 / 0 / 0** — nada de las Tandas 4–20 tocó producción |
+
+**Los 2 test users siguen inertes** (verificado 2026-08-08): `encrypted_password`
+vacío, `email_confirmed_at` null, **sin `auth.identities`**, **sin `profile`** →
+no autentican por ninguna vía y, aun con sesión imposible, RLS los deja en deny-all.
+
 ## 5. Checklist de purga pre-entrega
 
 - [x] **Purgados (2026-08-01, cierre Tanda 3):** los 5 productos `PRUEBA` sin referencias (3 del panel Losartán + 2 `PRUEBA T3P3`) y 1 principio huérfano. Queda **1** `PRUEBA` en `producto` (`PRUEBA T3 Inviolabilidad`, borrado suave) porque los libros inviolables lo referencian — es residuo documentado, no purgable.
-- [ ] Rotar la clave provisional del Dueño.
+- [x] **Verificado (2026-08-08, cierre Tanda 20):** producción **sin artefactos nuevos** de las Tandas 4–20 (0 en entrega/abono/pagador/venta/cxp; 0 principios `PRUEBA`; solo el Dueño tiene perfil). Todo el testeo de esas tandas fue en Postgres local.
+- [ ] Rotar la clave provisional del Dueño. **(Acción de Marien antes del go-live.)**
 - [ ] Dejar constancia del corte del `audit_log` (§3) en la entrega — las entradas de prueba permanecen por diseño.
 - [ ] **Residuo inviolable de la Tanda 3 — NO se puede borrar, se documenta:**
   - **2 usuarios `@wfarmacia-test.local`** en `auth.users` (`dueno@`/`cajero@`).
@@ -133,4 +156,4 @@ Cada tanda que genere entradas de prueba actualiza este corte.
 
 ---
 
-_Última actualización: 2026-08-01 (cierre Tanda 3 + esquema POS 0019/0020 — purga de 5 `PRUEBA`, corte 1343–1352)._
+_Última actualización: 2026-08-08 (cierre Tanda 20 — verificación de producción: sin artefactos nuevos de las Tandas 4–20; testeo en Postgres local; 2 test users inertes reconfirmados)._

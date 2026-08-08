@@ -21,7 +21,10 @@ retoman más adelante (ninguno bloquea la Tanda 4 · POS):
 3. **22 entradas ambiguas** del listado MVL: se resuelven a mano (no se auto-enlazan).
 4. **Verificar versión posterior de la Resolución 000009-17** (la busca Marien; la
    DIGEMAPS recibió inclusiones hasta 2025).
-5. **Umbral de discrepancia configurable desde Ajustes** (ver sección propia abajo).
+5. ~~**Umbral de discrepancia configurable desde Ajustes**~~ ✅ **HECHO (Tanda 20,
+   2026-08-08).** `/ajustes` edita `umbral_discrepancia_conteo` (T17) y
+   `conteo/actions.ts` (`revelarConteo` + `confirmarCorreccion`) **lo consume** con
+   RD$5,000 de default. Verificado en local (seed 5000 → Ajustes 8000 → leído 8000).
 6. **El importador (Pieza 3) sin probar con las manos de Marien** — ella prepararía un
    archivo "feo a propósito" (totales en medio, encabezados repetidos, celdas
    combinadas, símbolos de peso, dos formatos de fecha, espacios de más). Falta esa
@@ -43,10 +46,14 @@ encima del cual una corrección de conteo exige motivo + Dueño/Admin es una **c
 **La regla:** debe ser **configurable desde Ajustes**, no una constante — "una farmacia
 grande y una pequeña no tienen el mismo umbral, y este sistema se vende a muchas".
 
-**Qué falta:** una **tabla de configuración** (por cadena/sucursal), la pantalla de
-**Ajustes** para editarlo (solo Dueño/Admin), y que `confirmarCorreccion` lea de ahí
-con `5000` como valor por defecto. Requiere migración (tabla de config) → se junta con
-la ventana de PAT del esquema de la Tanda 4 para no abrir otra. **No bloquea** el POS.
+**Qué falta:** ~~una tabla de configuración, la pantalla de Ajustes, y que
+`confirmarCorreccion` lea de ahí con 5000 por defecto.~~
+
+> **✅ RESUELTO (Tanda 20, 2026-08-08).** La tabla `configuracion` (0020) ya existía;
+> `/ajustes` (Tanda 17) edita `umbral_discrepancia_conteo` (solo Dueño/Admin); y
+> `conteo/actions.ts` — tanto `revelarConteo` como `confirmarCorreccion` — lo lee por
+> `umbralDiscrepancia(supabase)`, con `UMBRAL_DISCREPANCIA_RD` (RD$5,000) como default
+> cuando no está configurado. Verificado en Postgres local (5000 → 8000 → leído 8000).
 
 ---
 

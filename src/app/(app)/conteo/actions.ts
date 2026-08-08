@@ -20,6 +20,22 @@ async function actor() {
   return user;
 }
 
+/**
+ * Umbral de discrepancia CONFIGURABLE desde Ajustes (clave `umbral_discrepancia_conteo`).
+ * Cae a la constante `UMBRAL_DISCREPANCIA_RD` (RD$5,000) si no está configurado —
+ * "una farmacia grande y una pequeña no tienen el mismo umbral" (PENDIENTES · Tanda 3).
+ */
+async function umbralDiscrepancia(supabase: ReturnType<typeof createClient>): Promise<number> {
+  const { data } = await supabase
+    .from('configuracion')
+    .select('valor')
+    .eq('clave', 'umbral_discrepancia_conteo')
+    .eq('sucursal_id', SUCURSAL)
+    .maybeSingle<{ valor: unknown }>();
+  const v = Number(data?.valor);
+  return v > 0 ? v : UMBRAL_DISCREPANCIA_RD;
+}
+
 /** Resultado revelado de una línea (lo que ve el humano tras contar a ciegas). */
 export interface LineaRevelada {
   lineaId: string;
@@ -164,6 +180,7 @@ export async function revelarConteo(conteoId: string): Promise<{ lineas?: LineaR
     .eq('conteo_id', conteoId)
     .not('cantidad_contada', 'is', null);
   if (error) return { error: 'No se pudo revelar el conteo.' };
+  const umbral = await umbralDiscrepancia(supabase);
 
   type L = {
     id: string;
@@ -201,7 +218,7 @@ export async function revelarConteo(conteoId: string): Promise<{ lineas?: LineaR
       diferencia,
       valor,
       causaSugerida: causa,
-      requiereAutorizacion: Math.abs(valor) >= UMBRAL_DISCREPANCIA_RD,
+      requiereAutorizacion: Math.abs(valor) >= umbral,
     });
   }
   return { lineas: out };
@@ -267,8 +284,9 @@ export async function confirmarCorreccion(input: {
   const valor = diferencia * precio;
   const motivo = input.motivo?.trim() || '';
 
-  // Gate por umbral (condición 2 de Marien).
-  if (Math.abs(valor) >= UMBRAL_DISCREPANCIA_RD) {
+  // Gate por umbral (condición 2 de Marien) — configurable desde Ajustes.
+  const umbral = await umbralDiscrepancia(supabase);
+  if (Math.abs(valor) >= umbral) {
     if (user.role !== 'dueno' && user.role !== 'administrador') {
       return {
         error: `Una diferencia de ${formatMoney(Math.abs(valor))} requiere autorización del Dueño o Administrador.`,
