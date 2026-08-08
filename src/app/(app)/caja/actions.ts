@@ -190,6 +190,52 @@ export async function cobrarEnEfectivo(input: CobrarEfectivoInput): Promise<Cobr
   return { ok: true, ventaId, total, vuelto: round2(Math.max(0, recibido - total)) };
 }
 
+export interface LineaEnEspera {
+  id: string;
+  nombre: string;
+  precio: number;
+  exentoItbis: boolean;
+  cantidad: number;
+  existencia: number;
+  controlado: boolean;
+  receta: boolean;
+}
+
+export interface CarritoEnEspera {
+  id: string;
+  etiqueta: string | null;
+  lineas: LineaEnEspera[];
+  creadoEn: string;
+}
+
+/** Aparca el carrito en curso (F8): varios vivos a la vez, con etiqueta. */
+export async function aparcarVenta(lineas: LineaEnEspera[], etiqueta: string): Promise<{ ok?: true; error?: string }> {
+  const user = await getSessionUser();
+  if (!user || !can(user.role, 'ver_operacion')) return { error: 'No autorizado.' };
+  if (!lineas || lineas.length === 0) return { error: 'No hay nada que poner en espera.' };
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('venta_en_espera')
+    .insert({ empleado_id: user.id, sucursal_id: SUCURSAL, etiqueta: etiqueta.trim() || null, carrito: lineas } as never);
+  if (error) return { error: 'No se pudo poner en espera.' };
+  revalidatePath('/caja');
+  return { ok: true };
+}
+
+/** Retoma un carrito aparcado: devuelve sus líneas y lo consume (queda vacío). */
+export async function retomarEnEspera(id: string): Promise<{ ok?: true; lineas?: LineaEnEspera[]; error?: string }> {
+  const user = await getSessionUser();
+  if (!user || !can(user.role, 'ver_operacion')) return { error: 'No autorizado.' };
+  const supabase = createClient();
+  const { data } = await supabase.from('venta_en_espera').select('carrito').eq('id', id).maybeSingle<{ carrito: LineaEnEspera[] }>();
+  if (!data) return { error: 'Ese carrito ya no está.' };
+  const lineas = Array.isArray(data.carrito) ? data.carrito : [];
+  // Sin DELETE por RLS (el mostrador no borra): se consume dejándolo vacío.
+  await supabase.from('venta_en_espera').update({ carrito: [] } as never).eq('id', id);
+  revalidatePath('/caja');
+  return { ok: true, lineas };
+}
+
 export interface AnularResultado {
   ok?: true;
   ya?: boolean;

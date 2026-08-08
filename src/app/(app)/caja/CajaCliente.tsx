@@ -2,11 +2,11 @@
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeftRight, Banknote, Check, Loader2, Lock, MapPin, Package, Pill, RotateCcw, ScanLine, ShieldCheck, ShoppingCart, Trash2, Wallet, X } from 'lucide-react';
+import { ArrowLeftRight, Banknote, Check, Loader2, Lock, MapPin, Package, PauseCircle, Pill, RotateCcw, ScanLine, ShieldCheck, ShoppingCart, Trash2, Wallet, X } from 'lucide-react';
 import { BRAND } from '@/lib/tokens';
 import { formatMoney, formatNumber } from '@/lib/format';
 import { normaliza } from '@/lib/catalogos';
-import { cobrarEnEfectivo, anularVenta } from './actions';
+import { cobrarEnEfectivo, anularVenta, aparcarVenta, retomarEnEspera, type CarritoEnEspera } from './actions';
 
 export interface CatalogoItem {
   id: string;
@@ -58,10 +58,12 @@ export function CajaCliente({
   catalogo,
   puedeDespacharControlados,
   puedeAnular,
+  enEspera,
 }: {
   catalogo: CatalogoItem[];
   puedeDespacharControlados: boolean;
   puedeAnular: boolean;
+  enEspera: CarritoEnEspera[];
 }) {
   const router = useRouter();
   const [query, setQuery] = useState('');
@@ -85,6 +87,12 @@ export function CajaCliente({
   const [presupuesto, setPresupuesto] = useState<CatalogoItem | null>(null);
   const [monto, setMonto] = useState('');
   const montoRef = useRef<HTMLInputElement>(null);
+
+  // Venta en espera (F8)
+  const [aparcando, setAparcando] = useState(false);
+  const [etiqueta, setEtiqueta] = useState('');
+  const [verEspera, setVerEspera] = useState(false);
+  const etiquetaRef = useRef<HTMLInputElement>(null);
 
   // Anulación de la última venta (solo Dueño/Administrador)
   const [anulando, setAnulando] = useState(false);
@@ -173,6 +181,42 @@ export function CajaCliente({
     setPresupuesto(destacado);
     setMonto('');
     setTimeout(() => montoRef.current?.focus(), 50);
+  }
+
+  function abrirAparcar() {
+    if (carrito.length === 0) {
+      setAviso('No hay nada que poner en espera.');
+      return;
+    }
+    setEtiqueta('');
+    setAparcando(true);
+    setTimeout(() => etiquetaRef.current?.focus(), 50);
+  }
+
+  async function confirmarAparcar() {
+    const res = await aparcarVenta(carrito, etiqueta);
+    if (res.ok) {
+      setCarrito([]);
+      setAparcando(false);
+      setAviso('Carrito puesto en espera.');
+      router.refresh();
+      buscarRef.current?.focus();
+    } else {
+      setAviso(res.error ?? 'No se pudo poner en espera.');
+      setAparcando(false);
+    }
+  }
+
+  async function retomar(id: string) {
+    const res = await retomarEnEspera(id);
+    if (res.ok && res.lineas) {
+      setCarrito(res.lineas);
+      setVerEspera(false);
+      router.refresh();
+      buscarRef.current?.focus();
+    } else {
+      setAviso(res.error ?? 'No se pudo retomar.');
+    }
   }
 
   function agregarPresupuesto(it: CatalogoItem, n: number) {
@@ -313,6 +357,13 @@ export function CajaCliente({
         }
         return;
       }
+      if (aparcando) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setAparcando(false);
+        }
+        return;
+      }
       if (e.key === 'F3') {
         e.preventDefault();
         abrirPresupuesto();
@@ -326,7 +377,7 @@ export function CajaCliente({
         else abrirCobro();
       } else if (e.key === 'F8') {
         e.preventDefault();
-        if (carrito.length > 0) setAviso('Poner en espera (F8) llega en la próxima pieza.');
+        abrirAparcar();
       } else if (e.key === 'Delete' && query === '') {
         e.preventDefault();
         quitarUltima();
@@ -335,7 +386,7 @@ export function CajaCliente({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [carrito, query, cobrando, bloqueadoClinico, recibido, presupuesto, destacado]);
+  }, [carrito, query, cobrando, bloqueadoClinico, recibido, presupuesto, destacado, aparcando]);
 
   function onBuscarKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'ArrowDown') {
@@ -358,6 +409,18 @@ export function CajaCliente({
       <div className="grid flex-1 grid-cols-1 gap-3 overflow-hidden p-3 lg:grid-cols-5">
         {/* Izquierda 60%: buscador + carrito */}
         <div className="flex min-h-0 flex-col gap-3 lg:col-span-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs text-ink-faint">
+              F3 presupuesto · F8 en espera · F4 cobrar · Supr quita
+            </div>
+            <button
+              onClick={() => setVerEspera(true)}
+              disabled={enEspera.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-control border border-line px-2.5 py-1 text-xs text-ink-soft hover:luminous disabled:opacity-40"
+            >
+              <PauseCircle className="h-3.5 w-3.5" /> En espera ({enEspera.length})
+            </button>
+          </div>
           <div className="relative">
             <ScanLine className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-faint" />
             <input
@@ -654,6 +717,82 @@ export function CajaCliente({
               {procesando ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
               {procesando ? 'Cobrando…' : 'Confirmar cobro'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Poner en espera (F8) */}
+      {aparcando && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setAparcando(false)}>
+          <div className="w-full max-w-sm rounded-card border border-line bg-surface p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center gap-2 font-display text-lg font-semibold text-ink">
+              <PauseCircle className="h-5 w-5 text-accent" /> Poner en espera
+            </div>
+            <p className="mb-3 text-sm text-ink-soft">Ponle un nombre o referencia para retomarlo después (opcional).</p>
+            <input
+              ref={etiquetaRef}
+              value={etiqueta}
+              onChange={(e) => setEtiqueta(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void confirmarAparcar();
+                }
+              }}
+              placeholder="Ej: Doña Carmen, camisa azul…"
+              className={inputBase}
+            />
+            <div className="mt-4 flex gap-2">
+              <button onClick={() => setAparcando(false)} className="flex-1 rounded-control border border-line px-4 py-2.5 text-sm text-ink-soft hover:bg-canvas">
+                Cancelar
+              </button>
+              <button
+                onClick={() => void confirmarAparcar()}
+                className="brand-gradient inline-flex flex-1 items-center justify-center gap-2 rounded-control px-4 py-2.5 text-sm font-semibold text-white"
+              >
+                <PauseCircle className="h-4 w-4" /> En espera
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Retomar un carrito en espera */}
+      {verEspera && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setVerEspera(false)}>
+          <div className="w-full max-w-md rounded-card border border-line bg-surface p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 font-display text-lg font-semibold text-ink">
+                <PauseCircle className="h-5 w-5 text-accent" /> Carritos en espera
+              </div>
+              <button onClick={() => setVerEspera(false)} className="text-ink-faint hover:text-ink" aria-label="Cerrar">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {enEspera.length === 0 ? (
+              <p className="py-6 text-center text-sm text-ink-faint">No hay carritos en espera.</p>
+            ) : (
+              <ul className="space-y-2">
+                {enEspera.map((c) => {
+                  const tot = c.lineas.reduce((s, l) => s + l.precio * l.cantidad, 0);
+                  const uds = c.lineas.reduce((s, l) => s + l.cantidad, 0);
+                  return (
+                    <li key={c.id}>
+                      <button
+                        onClick={() => void retomar(c.id)}
+                        className="flex w-full items-center justify-between gap-3 rounded-control border border-line px-3 py-2.5 text-left hover:luminous"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-ink">{c.etiqueta || 'Sin nombre'}</div>
+                          <div className="text-xs text-ink-faint tabular-nums">{formatNumber(uds)} unidad(es)</div>
+                        </div>
+                        <div className="text-right font-semibold text-ink tabular-nums">{formatMoney(tot)}</div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
         </div>
       )}
