@@ -1326,3 +1326,42 @@ Pendiente (Parte 4.4 — cierra Parte 4).
 
 ## 🔗 PR
 Pendiente (Parte 5 + 6 — cierra el CIERRE MAESTRO).
+
+---
+
+# CIERRE MAESTRO · POST-CIERRE — INSUMOS POR SERVICIO (§5, pedido de Marien) · 2026-08-08
+
+## ✅ Construido — migración `0042` (⚠️ PENDIENTE DE APLICAR A PRODUCCIÓN: PAT revocado)
+
+- **Migración `0042`** (probada idempotente 3× en local, **NO aplicada a producción**
+  porque el PAT fue revocado): tabla **`servicio_insumo`** (qué insumos y cuántos
+  consume cada tipo de servicio) + RLS (config: gestionar_inventario; lectura: operativo)
+  + auditoría.
+- **Descuento automático al registrar**: `registrarServicio` descuenta los insumos del
+  tipo **por FEFO**, dejando un movimiento **`ajuste`** por lote (`referencia servicio:<id>`,
+  motivo "Insumo de servicio: <tipo>"). Así el **conteo cíclico cuadra** y no marca
+  discrepancia todos los meses. **No usa `merma`** → no ensucia el reporte de merma.
+- **Configurador en `/servicios`** (solo gestionar_inventario): por tipo de servicio,
+  agregar/quitar insumos (buscar producto + cantidad). El formulario de registro
+  **avisa qué se descontará** ("jeringa ×2, algodón ×1…").
+- **Degrada con gracia**: si la tabla `servicio_insumo` **no existe** todavía (migración
+  0042 sin aplicar), el servicio se registra igual **sin descontar**, y el configurador
+  muestra un aviso claro de "aplicar la migración 0042". **Producción no se rompe.**
+- Si falta existencia de un insumo, el servicio **se registra igual** y avisa
+  ("sin existencia de: algodón (faltaron 1)").
+
+## 🔬 Probado (Postgres local)
+- **Prueba de vida del descuento**: mapeo *inyección → jeringa ×2*; al consumir, el lote
+  de jeringa pasa **10 → 8**, con un movimiento **`ajuste`** (referencia `servicio:…`).
+  **NO cuenta como merma** (0 filas tipo `merma`) → los reportes de merma quedan limpios.
+- `0042` idempotente 3×; `typecheck` / `lint` / `build` en verde; `/servicios` compila.
+
+## ⚠️ Honesto — lo IMPORTANTE
+- **La migración `0042` NO está en producción.** El PAT fue revocado (bien hecho). El
+  esquema queda en el repo, probado en local; **para activarlo en producción hay que
+  aplicar `0042`** (con un PAT nuevo por la Management API, o pegando el SQL en el
+  **SQL Editor** del panel de Supabase). Mientras no se aplique, la función **duerme sin
+  romper nada** (los servicios se registran sin descontar y el configurador lo dice).
+
+## 🔗 PR
+Pendiente.
