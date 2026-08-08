@@ -357,3 +357,25 @@ Vercel en verde (Ready) en cada uno.
 
 ## 🔗 PR
 #33.
+
+## ✅ Pieza 2 (PR #34) — Cadena de frío
+
+- **Migración `0030`** (**aplicada a producción**): `lectura_temperatura`, `apagon`,
+  `producto.requiere_refrigeracion` (override; hereda de la forma) y
+  `lote.en_revision_frio` + `revision_motivo`. Config: `umbral_apagon_horas` (2),
+  rango de nevera 2–8 °C. RLS+FORCE.
+- **App `/cadena-frio`**: registrar temperatura (marca fuera de rango), registrar y
+  **cerrar apagón** (si la duración excede el umbral, marca los lotes refrigerados
+  `en_revision_frio` y **bloquea su despacho**); el farmacéutico decide **«se salvó»**
+  (libera) o **«descartar»** (merma inviolable + lote a 0).
+- **Gate en el cobro**: el FEFO **nunca** despacha un lote `en_revision_frio`.
+
+## 🔬 Probado (base local)
+- `0030` idempotente (3×). Producto refrigerado (heredado de la forma) + lote →
+  la consulta de marcado lo identifica; tras marcarlo `en_revision_frio`, el
+  **FEFO vendible del cobro = 0** (no se puede despachar). **Aplicada a
+  producción**. ✅
+- `typecheck` / `lint` / `build` en verde.
+
+## 🔗 PR
+#34.
