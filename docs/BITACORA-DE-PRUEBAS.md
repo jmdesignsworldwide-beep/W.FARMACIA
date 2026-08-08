@@ -448,3 +448,30 @@ Vercel en verde (Ready) en cada uno.
 
 ## 🔗 PR
 #37.
+
+---
+
+# TANDA 10 — RADAR DE VENCIMIENTOS · 2026-08-08
+
+## ✅ Construido (PR #38) — sin migración (usa lote + política del proveedor)
+
+- **Página `/vencimientos`**: por cada lote activo que vence en ≤180 días calcula
+  **vida útil en %**, días restantes, **valor en riesgo** (cantidad × costo), y la
+  **recomendación que cambia según la ventana**: Devolver al laboratorio (ventana
+  de devolución abierta = vencimiento − días mínimos del proveedor) → Promocionar →
+  Descontar fuerte → Provisionar pérdida. Ordenado por **dinero en riesgo**, con el
+  total arriba. El radar no grita por lo que está bien (>180 días se omite).
+
+## 🔬 Probado
+- `typecheck` / `lint` / `build` en verde (página de servidor).
+
+## ⚠️ Honesto
+- **Vida útil %** se aproxima como `restante / (vencimiento − fecha_recepción)`
+  porque no se guarda la fecha de fabricación ni la vida útil total del producto.
+  Es un proxy razonable (a mayor ventana original, menor % al acercarse), no el %
+  teórico exacto.
+- **Flujo de devolución de un clic** (registro + seguimiento de nota de crédito):
+  pendiente, pieza siguiente.
+
+## 🔗 PR
+#38.
