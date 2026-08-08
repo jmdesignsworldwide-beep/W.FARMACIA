@@ -2,18 +2,27 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, Check, Loader2, PackagePlus, Search, Trash2 } from 'lucide-react';
+import { AlertTriangle, Check, Loader2, PackagePlus, Search, Trash2, Clock, Snowflake } from 'lucide-react';
 import { formatMoney } from '@/lib/format';
 import { normaliza } from '@/lib/catalogos';
 import { registrarRecepcion, type LineaRecepcion } from './actions';
 
 export interface ProveedorRec { id: string; nombre: string }
-export interface ProductoRec { id: string; nombre: string; precio: number; costoAnterior: number | null; busqueda: string }
+export interface ProductoRec { id: string; nombre: string; precio: number; costoAnterior: number | null; requiereRefrigeracion: boolean; busqueda: string }
 
 interface Fila extends LineaRecepcion {
   nombre: string;
   precio: number;
   costoAnterior: number | null;
+  requiereRefrigeracion: boolean;
+}
+
+/** §3.3 — vida útil corta al recibir: días hasta el vencimiento del lote que llega. */
+function diasHastaVencimiento(fecha: string | null): number | null {
+  if (!fecha) return null;
+  const v = new Date(fecha + 'T00:00:00').getTime();
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  return Math.round((v - hoy.getTime()) / 86400000);
 }
 
 const card = 'rounded-card border border-line bg-surface p-4';
@@ -43,7 +52,7 @@ export function RecepcionCliente({ proveedores, productos }: { proveedores: Prov
   }, [q, productos]);
 
   function agregar(p: ProductoRec) {
-    setFilas((f) => [...f, { productoId: p.id, nombre: p.nombre, precio: p.precio, costoAnterior: p.costoAnterior, cantidadPedida: null, cantidadRecibida: 0, precioCotizado: null, precioFacturado: p.costoAnterior, numeroLote: '', fechaVencimiento: null }]);
+    setFilas((f) => [...f, { productoId: p.id, nombre: p.nombre, precio: p.precio, costoAnterior: p.costoAnterior, requiereRefrigeracion: p.requiereRefrigeracion, cantidadPedida: null, cantidadRecibida: 0, precioCotizado: null, precioFacturado: p.costoAnterior, numeroLote: '', fechaVencimiento: null }]);
     setQ('');
   }
   function set(i: number, k: keyof Fila, v: unknown) {
@@ -124,6 +133,19 @@ export function RecepcionCliente({ proveedores, productos }: { proveedores: Prov
                   {d && (
                     <div className="mt-2 flex items-center gap-1.5 rounded-control border border-amber-500/40 bg-amber-500/5 px-2.5 py-1.5 text-xs text-amber-700 dark:text-amber-300">
                       <AlertTriangle className="h-3.5 w-3.5" /> Llegó {d.pct}% más caro (antes {formatMoney(f.costoAnterior ?? 0)}). Para mantener tu margen, sugerido: <strong>{formatMoney(d.sugerido)}</strong>
+                    </div>
+                  )}
+                  {(() => {
+                    const dias = diasHastaVencimiento(f.fechaVencimiento);
+                    return dias != null && dias <= 180 ? (
+                      <div className="mt-2 flex items-center gap-1.5 rounded-control border border-orange-500/40 bg-orange-500/5 px-2.5 py-1.5 text-xs text-orange-700 dark:text-orange-300">
+                        <Clock className="h-3.5 w-3.5" /> Vida útil corta: llega con {dias < 0 ? 'el vencimiento ya cumplido' : `solo ${dias} día(s)`} hasta vencer. ¿Aceptar este lote?
+                      </div>
+                    ) : null;
+                  })()}
+                  {f.requiereRefrigeracion && (
+                    <div className="mt-2 flex items-center gap-1.5 rounded-control border border-sky-500/40 bg-sky-500/5 px-2.5 py-1.5 text-xs text-sky-700 dark:text-sky-300">
+                      <Snowflake className="h-3.5 w-3.5" /> Requiere refrigeración. Verifica la cadena de frío antes de recibirlo y guárdalo de inmediato.
                     </div>
                   )}
                 </div>
