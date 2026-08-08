@@ -157,3 +157,40 @@ Vercel en verde (Ready) en cada uno.
 ## 🔗 PR
 
 #23 — mergeado a `main` por squash.
+
+---
+
+# TANDA 6 — MOTOR FISCAL NCF · Pieza 1 (esquema) · 2026-08-08
+
+## ✅ Construido
+
+- **Migración `0022`**: `secuencia_fiscal` (rango autorizado, próximo número,
+  vigencia, alerta de agotamiento), `comprobante` (entidad propia, **inviolable**,
+  con campos e-CF **dormidos**: xml, código de seguridad, fecha de firma, estado
+  DGII, respuesta del certificador), y **`app.siguiente_ncf(tipo)`** — asignación
+  **atómica** del número (bloqueo de fila `FOR UPDATE`, `SECURITY DEFINER` con
+  `search_path` fijo, `execute` revocado a `anon`). Semilla idempotente
+  `configuracion.modo_fiscal='ncf'`. **NO se siembran rangos** (los carga el Dueño
+  con los reales autorizados por la DGII — evita emitir NCF inválidos).
+
+## 🔬 Probado (base local)
+
+- **Idempotencia `0022`**: re-aplicada **3×** sin error. ✅
+- **NCF atómico**: rango B02 1..3 → `B0200000001`, `B0200000002`, `B0200000003`;
+  la 4ª llamada **falla** con "No hay secuencia fiscal disponible" (rango agotado).
+  Dos ventas nunca toman el mismo número. ✅
+- **Comprobante inviolable**: `UPDATE` **negado por la base**. ✅
+- **Estático**: `typecheck` / `lint` / `build` en verde.
+
+## ⚠️ NO construido aún (siguientes piezas de la Tanda 6)
+
+- **Cargar rangos** (pantalla Dueño/Admin) y **alerta de agotamiento**.
+- **Emitir comprobante en el cobro** (B02 consumidor final por defecto; B01 con
+  RNC), **preguntar RNC** en el momento correcto sin trabar la venta.
+- **Recibo** imprimible / térmico (QZ Tray) y compartible por WhatsApp.
+- **Nota de crédito** (B04) para anular.
+- **Migración `0022` NO aplicada a producción — pendiente del PAT.**
+
+## 🔗 PR
+
+Pieza 1 (esquema) — ver abajo.
