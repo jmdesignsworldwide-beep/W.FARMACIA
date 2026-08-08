@@ -404,3 +404,25 @@ Vercel en verde (Ready) en cada uno.
 
 ## 🔗 PR
 #35.
+
+## ✅ Pieza 4 (PR #36) — Préstamos entre farmacias
+
+- **Migración `0032`** (**aplicada a producción**): `prestamo` (dado/recibido,
+  producto, cantidad, contraparte, estado pendiente/devuelto, lote afectado).
+  RLS+FORCE; lo registra farmacéutico+.
+- **App `/prestamos`**: registrar préstamo dado o recibido (con buscador de
+  producto), que **ajusta el inventario con movimiento `transferencia`** (no venta
+  ni merma) — dado baja del lote FEFO, recibido crea un lote; **marcar devuelto**
+  revierte el inventario. Alerta de préstamo viejo (>30 días sin devolver).
+
+## 🔬 Probado (base local)
+- `0032` idempotente (3×). Ajuste de inventario: prestar 3 baja el lote 10→7;
+  devolver lo restaura 7→10. **Aplicada a producción**. ✅
+- `typecheck` / `lint` / `build` en verde.
+
+## ⚠️ Pendiente (Tanda 9)
+- **Visitadores médicos** (muestras que entran marcadas y no se venden) y **ficha
+  de cumplimiento** del proveedor — piezas siguientes.
+
+## 🔗 PR
+#36.
