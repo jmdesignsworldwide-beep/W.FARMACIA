@@ -35,7 +35,7 @@ export const NAV: NavGroup[] = [
       { href: '/cronicos', label: 'Crónicos', icon: 'CalendarClock', cap: 'ver_operacion' },
       { href: '/servicios', label: 'Servicios', icon: 'HeartPulse', cap: 'ver_operacion' },
       { href: '/inventario', label: 'Inventario', icon: 'Package', cap: 'gestionar_inventario', proximamente: true },
-      { href: '/vencimientos', label: 'Vencimientos', icon: 'CalendarClock', cap: 'ver_operacion', proximamente: true },
+      { href: '/vencimientos', label: 'Vencimientos', icon: 'CalendarClock', cap: 'ver_operacion' },
       { href: '/cadena-frio', label: 'Cadena de frío', icon: 'Snowflake', cap: 'ver_operacion' },
     ],
   },
