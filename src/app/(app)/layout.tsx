@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { WelcomeCinematic } from '@/components/brand/WelcomeCinematic';
@@ -9,6 +10,9 @@ import { WelcomeCinematic } from '@/components/brand/WelcomeCinematic';
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+
+  // §4.3 — Clave temporal: se obliga a cambiarla antes de navegar. No puede entrar a la app.
+  if (user.debeCambiarPassword) redirect('/cambiar-clave');
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
