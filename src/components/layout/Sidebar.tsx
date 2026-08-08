@@ -98,6 +98,16 @@ export function Sidebar({
         </div>
         <ThemeToggle />
       </div>
+
+      {/* Crédito del creador — único enlace externo, solo Instagram (§8) */}
+      <a
+        href={BRAND.makerInstagram}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block border-t border-line px-4 py-2 text-center text-[11px] text-ink-faint transition-colors hover:text-accent"
+      >
+        Hecho por {BRAND.maker}
+      </a>
     </div>
   );
 
