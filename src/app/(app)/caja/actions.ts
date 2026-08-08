@@ -46,13 +46,13 @@ interface ProdRow {
   producto_principio_activo: Array<{
     principio_activo: { es_controlado: boolean | null; requiere_receta: boolean | null } | null;
   }>;
-  lote: Array<{ id: string; cantidad_actual: number | null; estado: string; fecha_vencimiento: string | null; costo_unitario: number | null; en_revision_frio: boolean | null }>;
+  lote: Array<{ id: string; cantidad_actual: number | null; estado: string; fecha_vencimiento: string | null; costo_unitario: number | null; en_revision_frio: boolean | null; es_muestra: boolean | null }>;
 }
 
 function lotesFefo(p: ProdRow) {
   return p.lote
-    // Cadena de frío: un lote en revisión NO se despacha hasta que el farmacéutico decida.
-    .filter((l) => l.estado === 'activo' && !l.en_revision_frio && Number(l.cantidad_actual ?? 0) > 0)
+    // No se despacha: lote en revisión por frío, ni muestra médica (no se vende).
+    .filter((l) => l.estado === 'activo' && !l.en_revision_frio && !l.es_muestra && Number(l.cantidad_actual ?? 0) > 0)
     .sort((a, b) => (a.fecha_vencimiento ?? '9999-12-31').localeCompare(b.fecha_vencimiento ?? '9999-12-31'));
 }
 
@@ -94,7 +94,7 @@ export async function cobrarEnEfectivo(input: CobrarEfectivoInput): Promise<Cobr
     .select(
       `id, nombre, precio_venta, exento_itbis, es_controlado, requiere_receta,
        producto_principio_activo ( principio_activo:principio_activo_id ( es_controlado, requiere_receta ) ),
-       lote ( id, cantidad_actual, estado, fecha_vencimiento, costo_unitario, en_revision_frio )`,
+       lote ( id, cantidad_actual, estado, fecha_vencimiento, costo_unitario, en_revision_frio, es_muestra )`,
     )
     .in('id', ids)
     .is('eliminado_en', null);
