@@ -14,16 +14,21 @@
 - **Verificación estática**: `typecheck`, `lint`, `build` en verde por pieza.
 - **Unit**: lógica pura (matriz de roles, cálculos) ejecutada con `tsx`.
 
-## ⚠️ Bloqueo material de la corrida — EL PAT NO LLEGÓ
+## ✅ El PAT llegó y las migraciones 0021–0024 están APLICADAS a producción
 
-El PAT que se pasó **no está accesible en este entorno** (no aparece en variables
-de entorno ni en el mensaje recibido; los secretos se redactan antes de que el
-agente los vea). **Consecuencia:** no se pueden aplicar migraciones nuevas a
-producción por la Management API. **Plan seguido:** cada migración se escribe como
-archivo numerado en el repo y **se prueba idempotente en el Postgres local**; se
-mergea el código; y se marca aquí **"NO aplicada a producción — pendiente del
-PAT"**. Cuando el PAT llegue por un canal que alcance al agente (o Marien aplique
-las migraciones), el esquema queda listo para aplicar de un golpe.
+**Resuelto (2026-08-08).** Marien pasó el PAT; se aplicaron `0021`, `0022`, `0023`
+y `0024` a producción por la Management API, en orden, y se verificó en la base de
+producción: existen `caja_sesion`, `caja_egreso`, `secuencia_fiscal`,
+`comprobante`, `cliente`, `cliente_alergia`, `alerta_alergia_evento`; la función
+`public.siguiente_ncf`; **RLS FORCE en las 7 tablas**; y la FK
+`venta.caja_sesion_id`. El PAT vive solo en memoria durante la corrida; Marien lo
+revoca al terminar. Las notas "NO aplicada a producción" de cada tanda quedan
+históricas — a partir de aquí el esquema del preview refleja lo construido.
+
+> **Contexto previo:** al inicio de la corrida el PAT no llegaba al entorno (se
+> redactaba antes de que el agente lo viera), así que 0021–0024 se probaron
+> idempotentes en un Postgres local y se marcaron como no aplicadas hasta este
+> punto.
 
 > **Nota T4:** las migraciones de la Tanda 4 (`0019`, `0020`) **ya estaban en
 > producción** antes de esta corrida, así que el POS sí puede probarse en el
