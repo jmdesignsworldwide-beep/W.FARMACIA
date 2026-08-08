@@ -422,6 +422,10 @@ export interface AnularResultado {
   ok?: true;
   ya?: boolean;
   error?: string;
+  /** NCF de la nota de crédito B04 emitida (si la venta tenía comprobante). */
+  notaCreditoNcf?: string | null;
+  /** Aviso si había NCF pero no se pudo emitir la B04 (falta secuencia B04). */
+  avisoFiscal?: string;
 }
 
 /**
@@ -482,6 +486,41 @@ export async function anularVenta(ventaId: string, motivo: string): Promise<Anul
     .update({ estado: 'anulada', anulada_motivo: razon, anulada_por: user.id, anulada_en: new Date().toISOString() } as never)
     .eq('id', ventaId);
 
+  // §4.2 — Nota de crédito B04. El comprobante original es INVIOLABLE: no se edita.
+  // Si la venta tenía NCF, se emite una B04 NUEVA que lo modifica (obligación DGII).
+  let notaCreditoNcf: string | null = null;
+  let avisoFiscal: string | undefined;
+  const { data: original } = await supabase
+    .from('comprobante')
+    .select('id, tipo, ncf, rnc_receptor, nombre_receptor, subtotal, itbis, total')
+    .eq('venta_id', ventaId)
+    .eq('estado', 'emitido')
+    .in('tipo', ['B01', 'B02'])
+    .limit(1)
+    .maybeSingle<{ id: string; tipo: string; ncf: string; rnc_receptor: string | null; nombre_receptor: string | null; subtotal: number; itbis: number; total: number }>();
+  if (original) {
+    const { data: ncfB04, error: eNcf } = await supabase.rpc('siguiente_ncf' as never, { p_tipo: 'B04', p_sucursal: SUCURSAL } as never);
+    if (!eNcf && typeof ncfB04 === 'string') {
+      const { error: eComp } = await supabase.from('comprobante').insert({
+        venta_id: ventaId,
+        sucursal_id: SUCURSAL,
+        tipo: 'B04',
+        ncf: ncfB04,
+        rnc_receptor: original.rnc_receptor,
+        nombre_receptor: original.nombre_receptor,
+        subtotal: original.subtotal,
+        itbis: original.itbis,
+        total: original.total,
+        ncf_modificado: original.ncf, // referencia obligatoria al NCF original
+        emitido_por: user.id,
+      } as never);
+      if (!eComp) notaCreditoNcf = ncfB04;
+      else avisoFiscal = 'La venta quedó anulada, pero no se pudo registrar la nota de crédito B04. Revisa el módulo fiscal.';
+    } else {
+      avisoFiscal = 'La venta quedó anulada, pero no hay secuencia B04 configurada para emitir la nota de crédito. Configúrala en Fiscal (NCF).';
+    }
+  }
+
   revalidatePath('/caja');
-  return { ok: true };
+  return { ok: true, notaCreditoNcf, avisoFiscal };
 }

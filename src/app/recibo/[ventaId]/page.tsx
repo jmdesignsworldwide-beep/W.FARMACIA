@@ -29,7 +29,10 @@ export default async function ReciboPage({ params, searchParams }: { params: { v
     .eq('venta_id', params.ventaId);
   const lineas = (lineasData as unknown as Array<{ cantidad: number; es_fraccionada: boolean; precio_unitario: number; itbis_linea: number; producto: { nombre: string } | null }>) ?? [];
 
-  const { data: comp } = await supabase.from('comprobante').select('ncf, tipo, rnc_receptor').eq('venta_id', params.ventaId).maybeSingle<{ ncf: string; tipo: string; rnc_receptor: string | null }>();
+  const { data: compsData } = await supabase.from('comprobante').select('ncf, tipo, rnc_receptor').eq('venta_id', params.ventaId);
+  const comps = (compsData as unknown as Array<{ ncf: string; tipo: string; rnc_receptor: string | null }>) ?? [];
+  const comp = comps.find((c) => c.tipo === 'B01' || c.tipo === 'B02') ?? null;
+  const notaCredito = comps.find((c) => c.tipo === 'B04') ?? null;
   const { data: cobrosData } = await supabase.from('cobro').select('metodo, monto').eq('venta_id', params.ventaId);
   const cobros = (cobrosData as unknown as Array<{ metodo: string; monto: number }>) ?? [];
 
@@ -65,6 +68,7 @@ export default async function ReciboPage({ params, searchParams }: { params: { v
           {comp?.ncf && <div>NCF: {comp.ncf} ({comp.tipo})</div>}
           {comp?.rnc_receptor && <div>RNC cliente: {comp.rnc_receptor}</div>}
           {venta.estado === 'anulada' && <div className="font-bold">*** VENTA ANULADA ***</div>}
+          {notaCredito?.ncf && <div className="font-bold">Nota de crédito: {notaCredito.ncf} (B04)</div>}
         </div>
 
         <div className="my-2 border-t border-dashed border-black" />
