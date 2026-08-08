@@ -500,3 +500,37 @@ Vercel en verde (Ready) en cada uno.
 
 ## 🔗 PR
 #39.
+
+---
+
+# TANDA 12 — RECETAS Y CONTROLADOS · 2026-08-08
+
+## ✅ Pieza 1 (PR #40) — Despacho de controlados + libro inviolable
+
+- **Migración `0035`** (**aplicada a producción**): `receta` (médico, exequátur,
+  paciente, medicamento, indicaciones, imagen_url para receta por WhatsApp) y
+  `libro_controlado` **INVIOLABLE** (cada despacho con su farmacéutico, lote y
+  receta). RLS+FORCE.
+- **App `/controlados`** (solo `despachar_controlados` — el cajero no entra):
+  buscar controlado, cantidad, datos de la receta, despachar → **FEFO** descuenta,
+  `movimiento venta`, y **entrada en el libro inviolable** con el farmacéutico
+  responsable. **Alerta de patrón sospechoso** (mismo paciente + mismo controlado
+  en ≤20 días) que **se muestra, no bloquea**. El libro se ve completo abajo.
+
+## 🔬 Probado (base local) — 🟢 CRÍTICOS
+
+- **Crítico #3 (controlados):** una entrada **entra al `libro_controlado`**;
+  `UPDATE` y `DELETE` sobre ella son **negados por la base** («Registro inviolable
+  ADN §2.2»). ✅
+- **Crítico #1 (cajero):** `despacharControlado` exige `despachar_controlados` en
+  el servidor; `can(cajero, despachar_controlados)=false` (ya verificado) → el
+  cajero es rechazado aunque llame directo. ✅
+- `0035` idempotente (3×). **Aplicada a producción**. `typecheck`/`lint`/`build` en verde.
+
+## ⚠️ Pendiente (Tanda 12)
+- **Receta por WhatsApp** (subir la foto) y **alerta de receta vencida/duplicada**.
+- **Carpeta DIGEMAPS** (una pantalla imprimible con libro+temperaturas+licencia+
+  registros+vencidos+facturas) — pieza siguiente.
+
+## 🔗 PR
+#40.
