@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, BookLock, Check, Loader2, Lock, Search, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, BookLock, Check, Loader2, Lock, Search, ShieldCheck, FileCheck } from 'lucide-react';
 import { formatNumber } from '@/lib/format';
 import { normaliza } from '@/lib/catalogos';
+import { AvisoClinico } from '@/components/legal/AvisoClinico';
 import { despacharControlado } from './actions';
 
 export interface ControladoProd { id: string; nombre: string; controlado: boolean; receta: boolean; existencia: number; busqueda: string }
@@ -22,6 +23,7 @@ export function ControladosCliente({ productos, libro, puedeDespachar }: { produ
   const [exequatur, setExequatur] = useState('');
   const [paciente, setPaciente] = useState('');
   const [indicaciones, setIndicaciones] = useState('');
+  const [recetaFisica, setRecetaFisica] = useState(false);
   const [busy, setBusy] = useState(false);
   const [aviso, setAviso] = useState<{ tipo: 'ok' | 'error' | 'sospecha'; texto: string } | null>(null);
 
@@ -33,13 +35,14 @@ export function ControladosCliente({ productos, libro, puedeDespachar }: { produ
 
   async function despachar() {
     if (!prod) { setAviso({ tipo: 'error', texto: 'Elige el producto.' }); return; }
+    if (!recetaFisica) { setAviso({ tipo: 'error', texto: 'Confirma que tienes la receta física en mano antes de despachar.' }); return; }
     setBusy(true); setAviso(null);
-    const res = await despacharControlado({ productoId: prod.id, cantidad: Number(cantidad), medicoNombre: medico, medicoExequatur: exequatur, pacienteNombre: paciente, indicaciones });
+    const res = await despacharControlado({ productoId: prod.id, cantidad: Number(cantidad), medicoNombre: medico, medicoExequatur: exequatur, pacienteNombre: paciente, indicaciones, recetaFisica });
     setBusy(false);
     if (res.ok) {
-      setProd(null); setQ(''); setCantidad(''); setMedico(''); setExequatur(''); setPaciente(''); setIndicaciones('');
+      setProd(null); setQ(''); setCantidad(''); setMedico(''); setExequatur(''); setPaciente(''); setIndicaciones(''); setRecetaFisica(false);
       setAviso(res.sospechoso
-        ? { tipo: 'sospecha', texto: 'Despachado y anotado en el libro. ⚠️ Patrón: este paciente ya recibió este controlado hace poco — revísalo.' }
+        ? { tipo: 'sospecha', texto: 'Despachado y anotado en el libro. Nota: este paciente ya adquirió este mismo controlado recientemente. Revísalo — la decisión es tuya.' }
         : { tipo: 'ok', texto: 'Despachado y anotado en el libro inviolable con tu responsabilidad.' });
       router.refresh();
     } else setAviso({ tipo: 'error', texto: res.error ?? 'No se pudo.' });
@@ -89,14 +92,26 @@ export function ControladosCliente({ productos, libro, puedeDespachar }: { produ
           </div>
           <input value={indicaciones} onChange={(e) => setIndicaciones(e.target.value)} placeholder="Indicaciones (opcional)" className={`${inputBase} mt-2`} />
 
+          <div className="mt-3 rounded-control border border-amber-500/40 bg-amber-500/5 px-3 py-2">
+            <label className="flex items-start gap-2 text-sm text-ink">
+              <input type="checkbox" checked={recetaFisica} onChange={(e) => setRecetaFisica(e.target.checked)} className="mt-0.5" />
+              <span className="flex items-center gap-1.5 font-medium"><FileCheck className="h-4 w-4 text-amber-600 dark:text-amber-400" /> Tengo la receta física en mano.</span>
+            </label>
+            <p className="mt-1 pl-6 text-xs text-amber-700 dark:text-amber-300">
+              El despacho con receta solo se completa con la receta física, impresa y legible. Una foto puede acompañar el expediente como referencia, pero nunca habilita el despacho.
+            </p>
+          </div>
+
           {aviso && (
             <div className={`mt-3 flex items-center gap-2 rounded-control border px-3 py-1.5 text-xs ${aviso.tipo === 'error' ? 'border-rose-500/40 bg-rose-500/5 text-rose-700 dark:text-rose-300' : aviso.tipo === 'sospecha' ? 'border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-300' : 'border-emerald-500/40 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300'}`}>
               {aviso.tipo === 'sospecha' && <AlertTriangle className="h-3.5 w-3.5" />} {aviso.texto}
             </div>
           )}
-          <button onClick={despachar} disabled={busy || !prod || !cantidad || !paciente.trim()} className="brand-gradient mt-3 inline-flex items-center gap-2 rounded-control px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40">
+          <button onClick={despachar} disabled={busy || !prod || !cantidad || !paciente.trim() || !recetaFisica} className="brand-gradient mt-3 inline-flex items-center gap-2 rounded-control px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Despachar y anotar en el libro
           </button>
+
+          <div className="mt-3"><AvisoClinico /></div>
         </div>
       )}
 

@@ -108,7 +108,8 @@ export function CronicosCliente({ activos, candidatos, puedeConfirmar }: { activ
         ) : (
           <ul className="divide-y divide-line">
             {activos.map((t) => {
-              const texto = `Hola ${t.cliente}, le recordamos su ${t.principio}. Puede pasar por la farmacia cuando guste.`;
+              // §2.2: ningún mensaje nombra el medicamento (revela condición de salud, Ley 172-13).
+              const texto = `Buenos días, ${t.cliente}. Le recordamos su visita pendiente a la farmacia. Puede pasar cuando guste.`;
               const wa = waLink(t.telefono, texto);
               return (
                 <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
