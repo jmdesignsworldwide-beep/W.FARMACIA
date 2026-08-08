@@ -16,6 +16,7 @@ import {
   identificarCliente,
   revisarAlergias,
   registrarDecisionAlergia,
+  registrarConsentimiento,
   type CarritoEnEspera,
   type ClienteIdentificado,
   type ConflictoAlergia,
@@ -292,6 +293,15 @@ export function CajaCliente({
   function limpiarCliente() {
     setCliente(null);
     setConflictos([]);
+  }
+
+  async function guardarConsentimiento(consentimiento: boolean, aceptaMensajes: boolean) {
+    if (!cliente) return;
+    // Optimista: refleja de una; si falla, revierte.
+    const prev = cliente;
+    setCliente({ ...cliente, consentimientoDatos: consentimiento, aceptaMensajes });
+    const res = await registrarConsentimiento(cliente.id, { consentimiento, aceptaMensajes });
+    if (!res.ok) { setCliente(prev); setAviso(res.error ?? 'No se pudo guardar el consentimiento.'); }
   }
 
   async function decidirAlergia(despachar: boolean) {
@@ -634,6 +644,21 @@ export function CajaCliente({
                   {cliente.alergias.length > 0 && (
                     <div className="mt-0.5 text-xs text-rose-600 dark:text-rose-400">Alergias: {cliente.alergias.join(', ')}</div>
                   )}
+                  {/* §2.6 — Consentimiento de datos (Ley 172-13) y opción de mensajes */}
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    <button
+                      onClick={() => void guardarConsentimiento(!cliente.consentimientoDatos, cliente.aceptaMensajes)}
+                      className={`rounded-full border px-2 py-0.5 text-[11px] ${cliente.consentimientoDatos ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'border-line text-ink-faint'}`}
+                    >
+                      {cliente.consentimientoDatos ? '✓ Consintió datos' : 'Registrar consentimiento'}
+                    </button>
+                    <button
+                      onClick={() => void guardarConsentimiento(cliente.consentimientoDatos, !cliente.aceptaMensajes)}
+                      className={`rounded-full border px-2 py-0.5 text-[11px] ${cliente.aceptaMensajes ? 'border-line text-ink-soft' : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300'}`}
+                    >
+                      {cliente.aceptaMensajes ? 'Acepta mensajes' : '🔕 No desea mensajes'}
+                    </button>
+                  </div>
                 </div>
                 <button onClick={limpiarCliente} className="text-ink-faint hover:text-ink" aria-label="Quitar cliente">
                   <X className="h-4 w-4" />

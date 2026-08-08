@@ -1000,3 +1000,38 @@ Pendiente (Tanda 20 · Pieza 2 — cierra Tanda 20 y la corrida T4–T20).
 
 ## 🔗 PR
 Pendiente (Parte 2 · Pieza A).
+# CIERRE MAESTRO · PARTE 2 · PIEZA B — CONSENTIMIENTO Y DATOS (Ley 172-13) · 2026-08-08
+
+## ✅ Construido — migración `0038`
+
+- **Migración `0038`** (aplicada a producción, `HTTP 201`; idempotente 3× en local):
+  `cliente.consentimiento_datos` (bool), `cliente.consentimiento_en` (fecha),
+  `cliente.acepta_mensajes` (bool, default true = opt-out).
+- **Consentimiento en el POS**: al identificar un cliente, dos chips —
+  **"Registrar consentimiento"** (queda con fecha, revocable) y **"No desea mensajes"**
+  (opt-out). Guardan al instante vía `registrarConsentimiento` (optimista, revierte si falla).
+- **Opt-out respetado**: en `/cronicos`, si el cliente **no acepta mensajes**, su teléfono
+  **no se expone** para WhatsApp → el botón de WhatsApp no aparece.
+- **`/privacidad`**: política de privacidad **visible** — qué se guarda y para qué,
+  consentimiento revocable, mensajes neutros, y los **derechos** del cliente (acceso,
+  rectificación, supresión salvo lo que la ley obliga a conservar), más que el
+  `audit_log` registra quién accede. Enlazada en el pie de la barra lateral.
+
+## 🔬 Probado
+- **Prueba de vida** (Postgres local, RLS): un cliente guarda `consentimiento_datos=true`,
+  `acepta_mensajes=false`, con **fecha** → persiste. Artefacto `PRUEBA Consent` purgado.
+- `cliente_update` permite a los roles del mostrador (incl. cajero) → el consentimiento
+  se puede registrar en caja.
+- `0038` idempotente 3×; `typecheck` / `lint` / `build` en verde; `/privacidad` compila.
+
+## ⚠️ Honesto
+- **Encargos** guarda el teléfono como texto libre (no está enlazado a `cliente`), así
+  que su opt-out no se puede cruzar con el consentimiento; el mensaje de encargos ya es
+  **neutro** (Pieza A), que es la protección que importa. Enlazar encargo↔cliente para
+  opt-out fino queda anotado como mejora.
+- **Derecho de acceso/supresión**: la **política** los declara y el `audit_log` los
+  respalda; un botón de "exportar/borrar mis datos" self-service no se construyó — hoy
+  se atiende a mano (el export CSV de clientes ya existe en `/respaldo`).
+
+## 🔗 PR
+Pendiente (Parte 2 · Pieza B — cierra Parte 2).

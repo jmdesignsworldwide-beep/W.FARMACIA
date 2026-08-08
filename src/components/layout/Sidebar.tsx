@@ -99,6 +99,15 @@ export function Sidebar({
         <ThemeToggle />
       </div>
 
+      {/* Privacidad (Ley 172-13) */}
+      <Link
+        href="/privacidad"
+        onClick={() => setOpen(false)}
+        className="block border-t border-line px-4 py-2 text-center text-[11px] text-ink-faint transition-colors hover:text-accent"
+      >
+        Privacidad y datos
+      </Link>
+
       {/* Crédito del creador — único enlace externo, solo Instagram (§8) */}
       <a
         href={BRAND.makerInstagram}
