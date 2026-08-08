@@ -59,6 +59,8 @@ export const NAV: NavGroup[] = [
     titulo: 'Negocio',
     items: [
       { href: '/finanzas', label: 'Finanzas', icon: 'TrendingUp', cap: 'ver_finanzas' },
+      { href: '/fiado', label: 'Fiado (por cobrar)', icon: 'HandCoins', cap: 'ver_operacion' },
+      { href: '/por-pagar', label: 'Por pagar', icon: 'Receipt', cap: 'ver_finanzas' },
       { href: '/reportes', label: 'Reportes', icon: 'BarChart3', cap: 'ver_finanzas' },
       { href: '/insights', label: 'Insights', icon: 'Sparkles', cap: 'ver_finanzas', proximamente: true },
       { href: '/empleados', label: 'Empleados', icon: 'Users', cap: 'gestionar_empleados' },

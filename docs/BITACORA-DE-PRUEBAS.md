@@ -605,3 +605,51 @@ Vercel en verde (Ready) en cada uno.
 
 ## 🔗 PR
 #43.
+
+---
+
+# TANDA 15 — FIADO Y CUENTAS POR COBRAR/PAGAR · 2026-08-08
+
+## ✅ Construido (PR pendiente) — migración `0036`
+
+- **Migración `0036`** (aplicada a producción vía Management API, probada idempotente
+  3× en Postgres local): `pagador.limite_credito` + `pagador.telefono`; tabla
+  **`abono`** (pago parcial contra el saldo, append-only por grant); tabla
+  **`cuenta_por_pagar`** (el espejo: lo que se le debe a la droguería, con fecha).
+- **POS `/caja`** — el cobro ahora tiene un toggle **Efectivo / Fiar (crédito)**.
+  Al fiar se pide a nombre de quién (y teléfono opcional); la venta se cierra como
+  `cobro metodo='credito_interno'` con su `pagador` (`a_credito=true`), reusando el
+  pagador si ya existe por nombre. No exige efectivo recibido cuando es fiado.
+- **Página `/fiado`** (por cobrar): saldo por cliente = cobros a crédito − abonos;
+  **total por cobrar**; alerta de **límite de crédito** (cerca al 80% / pasado);
+  **registrar abono** (efectivo/transferencia) con atajo "abonar saldo completo";
+  **estado de cuenta por WhatsApp** (wa.me, +1 RD); ajuste de límite (solo Dueño/Admin).
+- **Página `/por-pagar`** (Dueño/Admin): pendientes con proveedor y vencimiento,
+  **total por pagar** y **ya vencido**; registrar CxP y marcar pagada.
+- **`/finanzas`** — se activó el **pronóstico de flujo de caja**: por cobrar (fiado)
+  vs por pagar (droguerías, con vencido) y **posición neta**.
+
+## 🔬 Probado
+- **Saldo de fiado** (Postgres local): 2 ventas fiadas (600 + 300) − abono 250 =
+  **650.00** ✔ (cálculo exacto).
+- **`abono` append-only**: como rol `authenticated` con RLS activo, `UPDATE` y
+  `DELETE` sobre `abono` → **`permission denied for table abono`** (solo se concede
+  `select, insert`). Consistente con su hermano `cobro`, que tampoco se borra por API.
+- `0036` idempotente (todo `if not exists` / `add column if not exists`); reaplicada
+  sin error.
+- `typecheck` / `lint` / `build` en verde; `/fiado` y `/por-pagar` compilan.
+
+## ⚠️ Honesto / pendiente
+- **`abono` NO lleva trigger `block_mutations`** (inviolabilidad dura por trigger):
+  es append-only **por grant**, igual que `cobro`. Los libros verdaderamente
+  inviolables por trigger siguen siendo audit, arqueo/egreso, comprobante,
+  alerta de alergia y libro de controlados. Decisión de diseño, no descuido:
+  el dinero recibido se corrige con un asiento nuevo, no editando el pasado.
+- El **límite de crédito** avisa pero **no bloquea** la venta fiada (política del
+  dueño, no del sistema): se ve el aviso en `/fiado`, la caja no frena.
+- Artefactos de prueba: solo en Postgres local (pagador/venta/cobro/abono con
+  prefijo `PRUEBA` y UUID `fada…`), **purgados en la misma sesión**; nunca tocaron
+  producción.
+
+## 🔗 PR
+Pendiente.

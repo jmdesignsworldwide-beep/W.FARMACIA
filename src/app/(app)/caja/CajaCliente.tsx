@@ -91,6 +91,9 @@ export function CajaCliente({
   const [procesando, setProcesando] = useState(false);
   const [errorCobro, setErrorCobro] = useState<string | null>(null);
   const [rnc, setRnc] = useState('');
+  const [fiar, setFiar] = useState(false);
+  const [fiadoNombre, setFiadoNombre] = useState('');
+  const [fiadoTel, setFiadoTel] = useState('');
   const [exito, setExito] = useState<{ vuelto: number; total: number; ventaId: string; ncf: string | null } | null>(null);
   const idemRef = useRef<string>('');
   const recibidoRef = useRef<HTMLInputElement>(null);
@@ -185,6 +188,9 @@ export function CajaCliente({
     idemRef.current = nuevoId();
     setRecibido('');
     setRnc('');
+    setFiar(false);
+    setFiadoNombre('');
+    setFiadoTel('');
     setErrorCobro(null);
     setExito(null);
     setCobrando(true);
@@ -202,6 +208,9 @@ export function CajaCliente({
     idemRef.current = nuevoId();
     setRecibido('');
     setRnc('');
+    setFiar(false);
+    setFiadoNombre('');
+    setFiadoTel('');
     setErrorCobro(null);
     setExito(null);
     setCobrando(true);
@@ -340,7 +349,11 @@ export function CajaCliente({
 
   async function confirmarCobro() {
     if (procesando) return;
-    if (recibidoNum + 0.001 < totales.total) {
+    if (fiar && !fiadoNombre.trim()) {
+      setErrorCobro('Escribe a nombre de quién queda el fiado.');
+      return;
+    }
+    if (!fiar && recibidoNum + 0.001 < totales.total) {
       setErrorCobro('El efectivo recibido no cubre el total.');
       return;
     }
@@ -352,6 +365,7 @@ export function CajaCliente({
       lineas: carrito.map((l) => ({ productoId: l.id, cantidad: l.cantidad })),
       rnc: rnc.trim() || undefined,
       clienteId: cliente?.id ?? null,
+      fiado: fiar ? { nombre: fiadoNombre.trim(), telefono: fiadoTel.trim() || undefined } : undefined,
     });
     if (res.ok && res.ventaId) {
       setExito({ vuelto: res.vuelto ?? 0, total: res.total ?? totales.total, ventaId: res.ventaId, ncf: res.ncf ?? null });
@@ -808,6 +822,25 @@ export function CajaCliente({
               <span className="font-display text-3xl font-bold text-ink tabular-nums">{formatMoney(totales.total)}</span>
             </div>
 
+            <div className="mb-3 inline-flex rounded-control border border-line p-0.5 text-sm">
+              <button onClick={() => setFiar(false)} className={`rounded-control px-3 py-1 ${!fiar ? 'bg-accent/10 text-ink' : 'text-ink-soft'}`}>Efectivo</button>
+              <button onClick={() => setFiar(true)} className={`rounded-control px-3 py-1 ${fiar ? 'bg-accent/10 text-ink' : 'text-ink-soft'}`}>Fiar (crédito)</button>
+            </div>
+
+            {fiar ? (
+              <div className="space-y-2">
+                <div>
+                  <label className="mb-1 block text-xs text-ink-soft">Fiado a nombre de</label>
+                  <input value={fiadoNombre} onChange={(e) => setFiadoNombre(e.target.value)} placeholder="Nombre del cliente" className="h-10 w-full rounded-control border border-line bg-canvas px-3 text-ink outline-none focus:luminous" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-ink-soft">Teléfono (opcional)</label>
+                  <input value={fiadoTel} onChange={(e) => setFiadoTel(e.target.value)} className="h-10 w-full rounded-control border border-line bg-canvas px-3 text-ink outline-none focus:luminous" />
+                </div>
+                <div className="rounded-control border border-amber-500/40 bg-amber-500/5 px-3 py-1.5 text-xs text-amber-700 dark:text-amber-300">Queda como deuda de {formatMoney(totales.total)} en su cuenta.</div>
+              </div>
+            ) : (
+              <>
             <label className="mb-1 block text-xs text-ink-soft">Efectivo recibido</label>
             <input
               ref={recibidoRef}
@@ -859,6 +892,8 @@ export function CajaCliente({
                 className="h-10 w-full rounded-control border border-line bg-canvas px-3 text-ink outline-none focus:luminous"
               />
             </div>
+              </>
+            )}
 
             {errorCobro && (
               <div className="mt-3 rounded-control border border-rose-500/40 bg-rose-500/5 px-3 py-1.5 text-xs text-rose-700 dark:text-rose-300">
@@ -868,11 +903,11 @@ export function CajaCliente({
 
             <button
               onClick={() => void confirmarCobro()}
-              disabled={procesando || recibidoNum + 0.001 < totales.total}
+              disabled={procesando || (fiar ? !fiadoNombre.trim() : recibidoNum + 0.001 < totales.total)}
               className="brand-gradient mt-4 inline-flex w-full items-center justify-center gap-2 rounded-control px-6 py-3 text-base font-semibold text-white disabled:opacity-40"
             >
               {procesando ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
-              {procesando ? 'Cobrando…' : 'Confirmar cobro'}
+              {procesando ? (fiar ? 'Fiando…' : 'Cobrando…') : (fiar ? 'Fiar (queda a crédito)' : 'Confirmar cobro')}
             </button>
           </div>
         </div>
