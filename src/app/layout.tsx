@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { ThemeScript } from '@/components/layout/ThemeToggle';
+import { RegisterSW } from '@/components/pwa/RegisterSW';
+import { OfflineBanner } from '@/components/pwa/OfflineBanner';
 import { BRAND, THEME_COLOR } from '@/lib/tokens';
 import './globals.css';
 
@@ -10,6 +12,7 @@ export const metadata: Metadata = {
   },
   description: BRAND.tagline,
   applicationName: BRAND.name,
+  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: BRAND.name },
 };
 
 export const viewport: Viewport = {
@@ -28,7 +31,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <ThemeScript />
       </head>
-      <body>{children}</body>
+      <body>
+        <OfflineBanner />
+        {children}
+        <RegisterSW />
+      </body>
     </html>
   );
 }
