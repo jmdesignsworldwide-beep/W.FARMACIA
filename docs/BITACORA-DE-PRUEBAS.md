@@ -275,12 +275,28 @@ Vercel en verde (Ready) en cada uno.
   (intervalo bien calculado: 61 días / 2 = 30.5 → 31). **Aplicada a producción**. ✅
 - `typecheck` / `lint` / `build` en verde.
 
-## ⚠️ NO construido aún (Tanda 7)
+## ✅ Pieza 4 (PR #31) — servicios de farmacia
 
-- **Servicios de farmacia** (inyección/presión/glucosa que descuentan insumos +
-  historial de presión/glucosa) — pieza siguiente.
+- **Migración `0027`** (**aplicada a producción**): `servicio` (inyección,
+  presión, glucosa, curación) con `resultado` (jsonb) para la medición, `valor`
+  cobrado y enlace a la caja del día.
+- **App `/servicios`**: registrar servicio (con medición de presión/glucosa),
+  historial reciente, y la jugada — si un cliente se mide seguido, se sugiere
+  seguirlo como crónico.
+
+## 🔬 Probado (base local)
+
+- `0027` idempotente (3×); servicio de presión `130/85` guardado y leído del
+  `resultado` jsonb. **Aplicada a producción**. ✅
+- `typecheck` / `lint` / `build` en verde.
+
+## ⚠️ Pendiente (Tanda 7)
+
+- **Descuento de insumos** del inventario por FEFO al registrar un servicio (jeringa,
+  tiras): el esquema lo soporta (`insumo_producto_id`/`insumo_lote_id`); falta el
+  selector de insumo + el decremento. Anotado en la pantalla.
 
 ## 🔗 PRs
 
-#27 (esquema) · #29 (POS + alerta) · #30 (crónicos). Migraciones `0024`–`0026`
-**aplicadas a producción**.
+#27 (esquema) · #29 (POS + alerta) · #30 (crónicos) · #31 (servicios). Migraciones
+`0024`–`0027` **aplicadas a producción**.
