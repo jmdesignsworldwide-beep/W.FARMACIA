@@ -210,3 +210,39 @@ Vercel en verde (Ready) en cada uno.
 ## 🔗 PRs
 
 #25 (Pieza 1 — esquema) · #26 (Pieza 2 — emisión + config).
+
+---
+
+# TANDA 7 — CLIENTES Y ALERGIAS · Pieza 1 (esquema) · 2026-08-08
+
+## ✅ Construido (PR #27)
+
+- **Migración `0024`**: `cliente` (expediente ligero, identificado por **teléfono**;
+  `fecha_nacimiento` habilita el descuento de ley), `cliente_alergia` (a un
+  principio o a una **familia** entera), `alerta_alergia_evento` (registro
+  **inviolable** de quién vio la alerta, qué decidió y por qué). RLS+FORCE en las
+  tres; alergia la escribe farmacéutico+; el evento es append-only.
+
+## 🔬 Probado (base local) — 🟢 CRÍTICO #2
+
+- **Alerta cruzada de alergia**: paciente alérgica a **Penicilinas** (registrada
+  por Amoxicilina), con **Ampicilina** en el carrito → la consulta de detección
+  dispara: *«ALERTA CRUZADA: Ampicilina 500mg → familia Penicilinas»*. La
+  comparación es por **familia**, no por molécula. ✅
+- **Inviolabilidad**: `UPDATE` sobre `alerta_alergia_evento` **negado por la
+  base**. ✅
+- **Idempotencia `0024`**: re-aplicada **3×** sin error. ✅
+- `typecheck` / `lint` / `build` en verde.
+
+## ⚠️ NO construido aún (Tanda 7)
+
+- **Integración en el POS**: identificar al cliente por teléfono, **interrumpir**
+  el despacho con la alerta y **registrar la decisión** (Pieza 2). El núcleo de
+  detección ya está probado; falta el flujo en pantalla.
+- **Crónicos** (detección automática, ciclo, atrasados, WhatsApp) y **servicios de
+  farmacia** (inyección/presión/glucosa) — piezas siguientes.
+- **Migración `0024` NO aplicada a producción — pendiente del PAT.**
+
+## 🔗 PR
+
+#27 (Pieza 1 — esquema + detección verificada).
