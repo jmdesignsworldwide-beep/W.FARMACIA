@@ -534,3 +534,23 @@ Vercel en verde (Ready) en cada uno.
 
 ## 🔗 PR
 #40.
+
+## ✅ Pieza 2 (PR #41) — Carpeta de inspección DIGEMAPS · cierra Tanda 12
+
+- **Página `/digemaps`** (solo `despachar_controlados`, sin migración): una sola
+  pantalla imprimible con **regente + licencia**, **libro de controlados**,
+  **registro de temperatura**, **registros sanitarios** de los productos,
+  **productos vencidos en existencia** y **facturas de compra**. Botón «Imprimir
+  carpeta» (con `print:` para ocultar lo que no va al papel).
+
+## 🔬 Probado
+- `typecheck` / `lint` / `build` en verde. Página de servidor que agrega de tablas
+  ya existentes (libro_controlado, lectura_temperatura, profiles, producto, lote,
+  recepcion).
+
+## ⚠️ Pendiente (Tanda 12)
+- **Receta por WhatsApp** (subir foto) y **alerta de receta vencida/duplicada** —
+  mejoras futuras.
+
+## 🔗 PR
+#41.
