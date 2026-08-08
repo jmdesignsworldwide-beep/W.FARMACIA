@@ -300,3 +300,35 @@ Vercel en verde (Ready) en cada uno.
 
 #27 (esquema) · #29 (POS + alerta) · #30 (crónicos) · #31 (servicios). Migraciones
 `0024`–`0027` **aplicadas a producción**.
+
+---
+
+# TANDA 8 — EMPLEADOS Y SEGURIDAD · 2026-08-08
+
+## ✅ Construido (PR #32)
+
+- **Migración `0028`** (**aplicada a producción**): amplía `profiles` con el
+  expediente — cédula, contacto de emergencia, foto, fecha de ingreso, dirección,
+  y para el regente **exequátur** + **vencimiento de licencia**.
+- **App `/empleados`** (solo Dueño/Admin): lista con rol, edición del expediente, y
+  **alerta de licencia del regente** (vencida / vence en ≤60 días / vigente), con
+  un panel de avisos arriba.
+- **Los 5 roles** ya estaban validados en servidor (0003) — sin cambios.
+
+## 🔬 Probado
+
+- `0028` idempotente (3×) en local; columnas nuevas presentes. **Aplicada a
+  producción** (cédula/exequátur/licencia confirmadas). ✅
+- `typecheck` / `lint` / `build` en verde.
+
+## ⚠️ NO construido aún (Tanda 8)
+
+- **Crear usuarios desde la app** (alta con rol) — requiere el admin API de Supabase
+  (service_role) y flujo de invitación; hoy los perfiles nacen del signup/auth.
+- **Vista del empleado de su propio historial** (el `audit_log` ya lo respalda) y
+  **turnos/horarios** — piezas siguientes.
+- **Documentos adjuntos** (Storage) — pendiente.
+
+## 🔗 PR
+
+#32.
