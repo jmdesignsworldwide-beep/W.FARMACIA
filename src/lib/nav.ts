@@ -44,7 +44,7 @@ export const NAV: NavGroup[] = [
     items: [
       { href: '/catalogos', label: 'Catálogos', icon: 'Library', cap: 'gestionar_catalogos' },
       { href: '/despacho', label: 'Despacho', icon: 'Pill', cap: 'ver_operacion', proximamente: true },
-      { href: '/controlados', label: 'Controlados', icon: 'ShieldCheck', cap: 'despachar_controlados', proximamente: true },
+      { href: '/controlados', label: 'Controlados', icon: 'ShieldCheck', cap: 'despachar_controlados' },
       { href: '/proveedores', label: 'Proveedores', icon: 'Truck', cap: 'gestionar_proveedores' },
       { href: '/recepcion', label: 'Recepción', icon: 'PackagePlus', cap: 'gestionar_inventario' },
       { href: '/prestamos', label: 'Préstamos', icon: 'Handshake', cap: 'gestionar_inventario' },
