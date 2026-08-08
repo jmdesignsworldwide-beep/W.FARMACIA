@@ -18,6 +18,8 @@ export interface CobrarEfectivoInput {
   idempotencia: string;
   recibido: number;
   lineas: LineaCobro[];
+  /** RNC del receptor: si viene, se emite crédito fiscal (B01); si no, consumidor final (B02). */
+  rnc?: string;
 }
 
 export interface CobrarResultado {
@@ -28,6 +30,8 @@ export interface CobrarResultado {
   error?: string;
   requiereFarmaceutico?: boolean;
   faltantes?: string[];
+  ncf?: string | null;
+  tipoNcf?: string | null;
 }
 
 interface ProdRow {
@@ -204,8 +208,33 @@ export async function cobrarEnEfectivo(input: CobrarEfectivoInput): Promise<Cobr
 
   await supabase.from('cobro').insert({ venta_id: ventaId, metodo: 'efectivo', monto: total, referencia: refIdem } as never);
 
+  // Comprobante fiscal: RNC → B01 (crédito fiscal); si no, B02 (consumidor final).
+  // Si no hay secuencia configurada, la venta NO se bloquea: queda sin NCF y se avisa.
+  let ncf: string | null = null;
+  let tipoNcf: string | null = null;
+  const rnc = input.rnc?.trim() || null;
+  const tipo = rnc ? 'B01' : 'B02';
+  const { data: numData, error: eNcf } = await supabase.rpc('siguiente_ncf' as never, { p_tipo: tipo, p_sucursal: SUCURSAL } as never);
+  if (!eNcf && typeof numData === 'string') {
+    const { error: eComp } = await supabase.from('comprobante').insert({
+      venta_id: ventaId,
+      sucursal_id: SUCURSAL,
+      tipo,
+      ncf: numData,
+      rnc_receptor: rnc,
+      subtotal,
+      itbis,
+      total,
+      emitido_por: user.id,
+    } as never);
+    if (!eComp) {
+      ncf = numData;
+      tipoNcf = tipo;
+    }
+  }
+
   revalidatePath('/caja');
-  return { ok: true, ventaId, total, vuelto: round2(Math.max(0, recibido - total)) };
+  return { ok: true, ventaId, total, vuelto: round2(Math.max(0, recibido - total)), ncf, tipoNcf };
 }
 
 export interface LineaEnEspera {
