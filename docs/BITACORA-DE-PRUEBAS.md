@@ -773,3 +773,43 @@ Pendiente (Tanda 17 · Pieza 1).
 
 ## 🔗 PR
 Pendiente (Tanda 17 · Pieza 2 — cierra Tanda 17).
+
+---
+
+# TANDA 18 — DASHBOARD VIVO (TRES ESTADOS DEL DINERO) · 2026-08-08
+
+## ✅ Construido (PR pendiente) — SIN migración
+
+- **Dashboard reescrito** (era un stub en ceros) → **datos reales** con los
+  **tres estados del dinero**, cada tarjeta enlazada a su pantalla:
+  1. **Líquido — hoy**: ventas completadas de hoy (total), tickets, y **margen real**
+     de hoy (precio − costo congelado). → `/caja-diaria`
+  2. **Parado — inventario**: valor del inventario vivo al costo + **capital dormido**
+     (sin venta en 90 días). → `/finanzas`
+  3. **En la calle — neto**: **por cobrar** (fiado) − **por pagar** (droguerías),
+     con color según signo. → `/fiado`
+- **Carriles de urgencia con datos reales** (no más estados vacíos vacuos):
+  **Vencidos** (n + RD$ en riesgo), **Vence esta semana** (≤7d), **Entregas en curso**
+  (pendiente/en_camino), **Cadena de frío** (lotes en revisión). Cada uno linkea.
+- **Banner de farmacia de turno**: si Ajustes marca turno, sale arriba del dashboard.
+- **Barrera de rol**: todo lo de dinero exige `ver_finanzas`; el **cajero ve solo
+  tickets de hoy**, sin cifras de dinero (§2.7).
+- **Móvil 390px**: los estados apilan en 1 columna en teléfono (`grid-cols-1`),
+  3 en escritorio; los carriles 1→2→4 según ancho. Tarjetas táctiles con enlace.
+
+## 🔬 Probado
+- **Consultas nuevas** del dashboard (entregas activas, cadena de frío, turno,
+  ventas de hoy) corren **sin error** contra el esquema real (Postgres local). ✔
+- El **margen de hoy** reusa el costo congelado de `venta_linea` (misma lógica ya
+  probada en `/finanzas`).
+- `typecheck` / `lint` / `build` en verde; `/dashboard` compila (4.13 kB).
+
+## ⚠️ Honesto / pendiente
+- Con el sistema aún sin ventas cargadas por Marien, **los estados muestran ceros
+  reales** y los carriles su mensaje tranquilo — no hay datos ficticios.
+- **No hay auto-refresh en vivo** (websocket/polling): el dashboard es *server-side*
+  y refresca al navegar o recargar. Un "vivo" con streaming se puede añadir después;
+  hoy la cifra es real al momento de abrir.
+
+## 🔗 PR
+Pendiente (Tanda 18).
