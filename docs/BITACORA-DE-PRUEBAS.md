@@ -913,3 +913,50 @@ Pendiente (Tanda 19).
 
 ## 🔗 PR
 Pendiente (Tanda 20 · Pieza 1).
+
+---
+
+# TANDA 20 · PIEZA 2 — CIERRE: ARTEFACTOS, UMBRAL CONFIGURABLE, DOCS · 2026-08-08
+
+## ✅ Verificación de artefactos de prueba en producción
+Auditoría en vivo (Management API). Resultado, sin maquillar:
+- `producto` `PRUEBA` = **1** (solo `PRUEBA T3 Inviolabilidad`, borrado suave,
+  referenciado por libros inviolables — residuo documentado de la Tanda 3).
+- `principio_activo` `PRUEBA` = **0**.
+- `auth.users` `@wfarmacia-test.local` = **2** (los inertes de la Tanda 3).
+- `profiles` = **1** (solo el Dueño → los 2 test users **sin perfil**).
+- `entrega`/`abono`/`pagador`/`venta`/`cuenta_por_pagar` = **0/0/0/0/0**.
+- **Los 2 test users reconfirmados INERTES**: `encrypted_password` vacío, sin
+  confirmar, **sin `auth.identities`**, **sin `profile`** → no autentican.
+- **Conclusión:** todo el testeo de las Tandas 4–20 fue en **Postgres local**;
+  producción recibió **solo esquema** (0021–0037) + seed de config. **Cero
+  artefactos nuevos en producción.** Registro actualizado en `ARTEFACTOS-DE-PRUEBA.md`.
+
+## ✅ Corrección honesta de un dicho de la Tanda 17
+En la bitácora de la **Tanda 17 · Pieza 1** dije que `umbral_discrepancia_conteo`
+"ya se consumía". **Era falso**: `conteo/actions.ts` usaba la **constante** `5000`
+fija; el seed existía pero nadie lo leía. Se corrigió de verdad en esta pieza:
+- `conteo/actions.ts` ahora lee el umbral por `umbralDiscrepancia(supabase)` en
+  `revelarConteo` **y** `confirmarCorreccion`, con `UMBRAL_DISCREPANCIA_RD`
+  (RD$5,000) como default. **Verificado en local**: seed 5000 → Ajustes 8000 →
+  leído **8000**; restaurado.
+- Con esto quedan **dos** ajustes vivos de verdad: `dias_alerta_vencimiento`
+  (radar) y `umbral_discrepancia_conteo` (conteo). **Cierra PENDIENTES · Tanda 3 · #5.**
+
+## ⚠️ Honesto — lo que NO se hizo en la elevación
+- **`docs/FARMACIA-CLAUDE.md` "Parte 8"**: ese documento gobernante **no vive en el
+  repo** (fue material que subió Marien); no se inventó ni se editó a ciegas. El
+  cierre se dejó en las fuentes de verdad que SÍ están en el repo: esta bitácora,
+  `ARTEFACTOS-DE-PRUEBA.md` y `PENDIENTES.md`.
+- **PENDIENTES de Tanda 3 que siguen abiertos** (por factores externos, no por
+  descuido): semilla grande DIGEMAPS (servidor MISPAS caído), enlace de las 207 de
+  venta libre al catálogo de principios (espera ese semilla), versión posterior de la
+  Res. 000009-17 (la busca Marien), y la prueba de fuego del importador con un
+  archivo "feo a propósito" (manos de Marien). Ninguno lo puede cerrar Claude solo.
+- **Recorrido de un día completo** (walkthrough con ventas reales): no se puede
+  simular sin datos de Marien; el sistema arranca vacío por diseño (§5.3 #3). Se
+  verificó cada pieza por separado y la seguridad por rol; el día completo lo maneja
+  Marien en el preview.
+
+## 🔗 PR
+Pendiente (Tanda 20 · Pieza 2 — cierra Tanda 20 y la corrida T4–T20).
