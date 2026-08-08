@@ -1270,3 +1270,59 @@ Pendiente (Parte 4.3).
 
 ## 🔗 PR
 Pendiente (Parte 4.4 — cierra Parte 4).
+
+---
+
+# CIERRE MAESTRO · PARTE 5 + PARTE 6 — VERIFICACIÓN CON EVIDENCIA · 2026-08-08
+
+## 🚨 Las 5 críticas (Parte 6) — todas PROBADAS
+
+1. **El cajero NO puede despachar un controlado (por llamada directa).** ✅
+   `can('cajero','despachar_controlados') = false` (unit); `can('motorista', …) = false`;
+   solo dueño/administrador/farmacéutico = true. Además `despacharControlado` valida
+   `can(user.role,'despachar_controlados')` **en el servidor** (no solo el botón).
+2. **La alerta cruzada de alergia dispara.** ✅ Cliente **alérgico a Penicilinas** pidiendo
+   **Ampicilina 500** → `alergias_en_conflicto` devuelve el producto con familia
+   **"Penicilinas"** (Postgres local). Compara por **familia**, no solo por molécula.
+3. **Los libros inviolables resisten UPDATE y DELETE.** ✅ `movimiento_inventario` →
+   ambos rechazados con *"Registro inviolable (ADN §2.2)"*; `comprobante` idem (Parte 4.2);
+   triggers `*_inviolable` presentes en `libro_controlado`, `caja_egreso`, `comprobante`.
+4. **El stock baja del lote correcto por FEFO.** ✅ Dos lotes (vence 2027-01-01 y 2026-09-01)
+   → FEFO toma primero el que **vence antes** (2026-09-01). El código `lotesFefo` ordena por
+   `fecha_vencimiento` ascendente y excluye lotes en revisión de frío y muestras.
+5. **La nota de crédito se emite al anular y el original queda intacto.** ✅ (Parte 4.2):
+   B04 con `ncf_modificado` = NCF original; el original queda `emitido` y su UPDATE/DELETE
+   se rechaza por inviolabilidad.
+
+## 📋 Los 10 supuestos (Parte 5) — estado REAL, sin maquillar
+
+- [✅] **Ficha de cumplimiento del proveedor** — **existe el cálculo** (Parte 3·B):
+  completitud, honró cotización, compras+desde, pendiente de pago.
+- [❌] **Comparador de precios entre droguerías** — **NO construido**. El dato está
+  (`historial_costo` / `lote.proveedor_id`); es una **vista pendiente**, alcanzable. No se fingió.
+- [❌] **Estacionalidad y demanda proyectada** (`/insights`) — **NO construido** (sigue stub).
+  Necesita meses de historia → **condicionado (día noventa)**.
+- [⚠️] **Encargos — aviso al llegar** — **semi-automático**: el mostrador marca "Llegó" y
+  aparece el botón de **WhatsApp neutro** ("su pedido está listo", sin nombrar el producto).
+  No es una notificación push automática; el aviso se manda con un clic.
+- [❌] **Servicios descuentan insumos del inventario** — **NO**. Hoy el servicio se registra
+  como **ingreso**; no descuenta insumos (jeringa, tira reactiva…) porque **no existe el
+  mapeo insumo-por-servicio**. Es una mejora real pendiente, no está hecho.
+- [✅] **Cadena de frío — bloqueo de despacho tras apagón** — **funciona**: el FEFO del POS
+  y de controlados **excluye los lotes `en_revision_frio`** → no se despachan.
+- [✅] **Alerta cruzada de alergia** (amoxicilina/ampicilina) — **probada** (ver crítica #2).
+- [✅] **Cajero y controlados — por llamada directa** — **bloqueado** (ver crítica #1).
+- [✅] **FEFO — en la base** — **probado** (ver crítica #4).
+- [✅] **Libros inviolables — UPDATE/DELETE** — **probados** (ver crítica #3).
+
+## ⚠️ Honesto — lo que queda pendiente de esta verificación
+- **3 de los 10 no están** (comparador de droguerías, estacionalidad/insights, insumos de
+  servicios) y **1 es semi** (aviso de encargos con un clic, no push). Se reportan tal cual.
+- Alcanzable ya (dato listo, falta vista): **comparador de precios**. Condicionado a datos:
+  **estacionalidad/demanda**. Requiere esquema nuevo: **insumos por servicio**.
+- Artefactos de prueba de esta verificación: solo Postgres local; lo borrable se purgó.
+  Quedan inertes por FK inviolable **1 `PRUEBA Inviol` + su movimiento** (local, efímero,
+  nunca tocó producción).
+
+## 🔗 PR
+Pendiente (Parte 5 + 6 — cierra el CIERRE MAESTRO).
