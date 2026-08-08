@@ -16,6 +16,8 @@ interface Row {
   requiere_receta: boolean | null;
   codigo_barras: string | null;
   ubicacion_fisica_default: string | null;
+  unidad_base: string | null;
+  forma: { permite_fraccionamiento: boolean | null } | null;
   laboratorio: { nombre: string } | null;
   producto_principio_activo: Array<{
     concentracion_valor: number | null;
@@ -39,7 +41,8 @@ export default async function CajaPage() {
     .from('producto')
     .select(
       `id, nombre, precio_venta, exento_itbis, es_controlado, requiere_receta, codigo_barras,
-       ubicacion_fisica_default,
+       ubicacion_fisica_default, unidad_base,
+       forma:forma_farmaceutica_id ( permite_fraccionamiento ),
        laboratorio:laboratorio_id ( nombre ),
        producto_principio_activo (
          concentracion_valor, concentracion_unidad, concentracion_volumen_valor, concentracion_volumen_unidad,
@@ -87,6 +90,8 @@ export default async function CajaPage() {
       receta: p.requiere_receta ?? molReceta,
       existencia,
       ubicacion,
+      fraccionable: Boolean(p.forma?.permite_fraccionamiento),
+      unidadBase: p.unidad_base ?? 'unidad',
       firmaMolecula,
       firmaCompleta,
       principios,
