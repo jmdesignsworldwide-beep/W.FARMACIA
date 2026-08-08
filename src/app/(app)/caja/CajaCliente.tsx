@@ -6,6 +6,8 @@ import { AlertTriangle, ArrowLeftRight, Banknote, Check, Loader2, Lock, MapPin, 
 import { BRAND } from '@/lib/tokens';
 import { formatMoney, formatNumber } from '@/lib/format';
 import { normaliza } from '@/lib/catalogos';
+import { useOnline } from '@/components/pwa/OfflineBanner';
+import { guardarCatalogo } from '@/lib/offline/catalogo-cache';
 import {
   cobrarEnEfectivo,
   anularVenta,
@@ -77,6 +79,11 @@ export function CajaCliente({
   enEspera: CarritoEnEspera[];
 }) {
   const router = useRouter();
+  const online = useOnline();
+  // Guarda una foto del catálogo en IndexedDB cuando hay conexión (consulta offline).
+  useEffect(() => {
+    if (online && catalogo.length > 0) void guardarCatalogo(catalogo);
+  }, [online, catalogo]);
   const [query, setQuery] = useState('');
   const q = useDeferredValue(query);
   const [sel, setSel] = useState(0);
@@ -199,6 +206,7 @@ export function CajaCliente({
 
   function abrirCobro() {
     if (carrito.length === 0 || bloqueadoClinico) return;
+    if (!online) { setAviso('Sin conexión: el cobro espera a que vuelva el internet.'); return; }
     // La alerta cruzada de alergia INTERRUMPE antes de cobrar.
     if (conflictos.length > 0) {
       setMotivoAlergia('');
@@ -792,10 +800,11 @@ export function CajaCliente({
             </div>
             <button
               onClick={abrirCobro}
-              disabled={carrito.length === 0 || bloqueadoClinico}
+              disabled={carrito.length === 0 || bloqueadoClinico || !online}
+              title={!online ? 'Sin conexión: el cobro espera a que vuelva el internet' : undefined}
               className="brand-gradient inline-flex items-center gap-2 rounded-control px-6 py-3 text-base font-semibold text-white disabled:opacity-40"
             >
-              Cobrar <span className="text-xs opacity-80">F4</span>
+              {online ? <>Cobrar <span className="text-xs opacity-80">F4</span></> : 'Cobrar (sin conexión)'}
             </button>
           </div>
         </div>

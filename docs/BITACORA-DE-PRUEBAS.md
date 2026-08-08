@@ -813,3 +813,50 @@ Pendiente (Tanda 17 · Pieza 2 — cierra Tanda 17).
 
 ## 🔗 PR
 Pendiente (Tanda 18).
+
+---
+
+# TANDA 19 — PWA OFFLINE (INDEXEDDB) · 2026-08-08
+
+## ✅ Construido (PR pendiente) — SIN migración
+
+- **App instalable** (PWA): `src/app/manifest.ts` (nombre, `display: standalone`,
+  `start_url: /dashboard`, íconos, colores de tema) — se puede "Agregar a pantalla
+  de inicio" y abre a pantalla completa.
+- **Service worker** (`public/sw.js`, JS válido verificado con `node --check`):
+  - Estáticos inmutables (`/_next/static/*`, ícono, manifest): **cache-first**.
+  - Navegaciones: **network-first** → si no hay red, sirve la última copia cacheada
+    de esa página y, si no existe, la página **`/offline.html`**.
+  - **Jamás cachea POST**: las escrituras siempre van a la red.
+- **`public/offline.html`**: pantalla premium "Sin conexión — vuelve sola cuando
+  regrese la señal", con reintento y recarga automática al volver online.
+- **IndexedDB** (`src/lib/offline/catalogo-cache.ts`, sin dependencias): el POS
+  **guarda una foto del catálogo** cuando hay conexión, para poder **consultar
+  precios offline**. Es best-effort y no lanza si el navegador no lo soporta.
+- **Conciencia de conexión**: barra global amarilla al perder red (`OfflineBanner`);
+  en el POS, **el botón Cobrar se deshabilita offline** (y el atajo F4 avisa) con
+  mensaje claro. El registro del SW es silencioso.
+
+## 🔬 Probado
+- `node --check public/sw.js` → **JS válido**. ✔
+- `build` genera `/manifest.webmanifest` como ruta; `typecheck` / `lint` / `build`
+  en verde; `/caja` y `/dashboard` compilan con la lógica offline.
+
+## ⚠️ Honesto / IMPORTANTE — el límite, sin maquillar
+- **NO hay ventas offline.** Cobrar es una escritura de servidor que depende de la
+  **secuencia NCF, el FEFO y la existencia en vivo**; una cola offline que las
+  fingiera podría **duplicar NCF, romper el descuento de lote o doble-cobrar**. Por
+  eso, con honestidad: **offline se CONSULTA, no se COBRA.** El cobro espera a que
+  vuelva el internet. Esto es una decisión de seguridad, no una carencia.
+- **Íconos en SVG, no PNG.** No hay herramienta de imágenes en el entorno para
+  generar PNG 192/512; Android Chrome (el teléfono de la farmacia) acepta el ícono
+  SVG del manifiesto. Un set PNG/maskable es pulido para la Tanda 20.
+- **Cache de navegaciones en terminal compartida**: se sirve la última copia solo
+  como *fallback* sin red; en línea siempre gana la red (network-first), así no se
+  muestra estado viejo con conexión.
+- No se pudo **probar el ciclo offline real en un navegador** desde este entorno
+  (sin navegador headless con SW aquí); se verificó la validez del SW y la
+  compilación. La prueba en dispositivo la hace Marien en el preview.
+
+## 🔗 PR
+Pendiente (Tanda 19).
