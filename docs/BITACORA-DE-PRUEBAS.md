@@ -426,3 +426,25 @@ Vercel en verde (Ready) en cada uno.
 
 ## 🔗 PR
 #36.
+
+## ✅ Pieza 5 (PR #37) — Visitadores médicos y muestras · cierra Tanda 9
+
+- **Migración `0033`** (**aplicada a producción**): `visita_medica` + `lote.es_muestra`.
+  RLS+FORCE.
+- **App `/visitadores`**: registrar visita (laboratorio, visitador, fecha, notas) y
+  las **muestras** recibidas, que entran al inventario como lotes **`es_muestra`**.
+- **Gate en el cobro**: el FEFO **excluye** los lotes `es_muestra` — una muestra
+  **no se vende**.
+
+## 🔬 Probado (base local)
+- `0033` idempotente (3×). Lote `es_muestra` de un producto → **vendibles por FEFO
+  = 0** (total 1, vendible 0). **Aplicada a producción**. ✅
+- `typecheck` / `lint` / `build` en verde.
+
+## ⚠️ Pendiente de la Tanda 9 (a retomar con reportes)
+- **Ficha de cumplimiento** del proveedor (agregado de discrepancias de
+  `recepcion_linea`) — encaja mejor con la Tanda 14 (reportes).
+- **Pedidos y ofertas** del visitador — mejora futura.
+
+## 🔗 PR
+#37.
