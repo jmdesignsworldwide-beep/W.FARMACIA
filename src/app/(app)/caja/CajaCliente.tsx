@@ -1,10 +1,12 @@
 'use client';
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeftRight, MapPin, Package, Pill, ScanLine, ShieldCheck, ShoppingCart, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeftRight, Banknote, Check, Loader2, Lock, MapPin, Package, Pill, ScanLine, ShieldCheck, ShoppingCart, Trash2, X } from 'lucide-react';
 import { BRAND } from '@/lib/tokens';
 import { formatMoney, formatNumber } from '@/lib/format';
 import { normaliza } from '@/lib/catalogos';
+import { cobrarEnEfectivo } from './actions';
 
 export interface CatalogoItem {
   id: string;
@@ -28,6 +30,16 @@ interface Linea {
   exentoItbis: boolean;
   cantidad: number;
   existencia: number;
+  controlado: boolean;
+  receta: boolean;
+}
+
+/** Denominaciones dominicanas para el cálculo de vuelto. */
+const DENOMINACIONES = [2000, 1000, 500, 200, 100, 50];
+
+function nuevoId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  return `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
 }
 
 const inputBase =
@@ -40,7 +52,14 @@ function itbisLinea(precio: number, cantidad: number, exento: boolean): number {
   return (precio * cantidad * r) / (1 + r);
 }
 
-export function CajaCliente({ catalogo }: { catalogo: CatalogoItem[] }) {
+export function CajaCliente({
+  catalogo,
+  puedeDespacharControlados,
+}: {
+  catalogo: CatalogoItem[];
+  puedeDespacharControlados: boolean;
+}) {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const q = useDeferredValue(query);
   const [sel, setSel] = useState(0);
@@ -48,6 +67,15 @@ export function CajaCliente({ catalogo }: { catalogo: CatalogoItem[] }) {
   const [aviso, setAviso] = useState<string | null>(null);
   const buscarRef = useRef<HTMLInputElement>(null);
   const qtyRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // Cobro
+  const [cobrando, setCobrando] = useState(false);
+  const [recibido, setRecibido] = useState('');
+  const [procesando, setProcesando] = useState(false);
+  const [errorCobro, setErrorCobro] = useState<string | null>(null);
+  const [exito, setExito] = useState<{ vuelto: number; total: number } | null>(null);
+  const idemRef = useRef<string>('');
+  const recibidoRef = useRef<HTMLInputElement>(null);
 
   const resultados = useMemo(() => {
     const t = normaliza(q).trim();
@@ -104,6 +132,52 @@ export function CajaCliente({ catalogo }: { catalogo: CatalogoItem[] }) {
     return { total, itbis, subtotal: total - itbis, unidades: carrito.reduce((s, l) => s + l.cantidad, 0) };
   }, [carrito]);
 
+  const bloqueadoClinico = carrito.some((l) => l.controlado || l.receta) && !puedeDespacharControlados;
+  const recibidoNum = Number(recibido) || 0;
+  const vuelto = recibidoNum - totales.total;
+
+  function abrirCobro() {
+    if (carrito.length === 0 || bloqueadoClinico) return;
+    idemRef.current = nuevoId();
+    setRecibido('');
+    setErrorCobro(null);
+    setExito(null);
+    setCobrando(true);
+    setTimeout(() => recibidoRef.current?.focus(), 50);
+  }
+
+  function cerrarCobro() {
+    setCobrando(false);
+    setProcesando(false);
+    setErrorCobro(null);
+  }
+
+  async function confirmarCobro() {
+    if (procesando) return;
+    if (recibidoNum + 0.001 < totales.total) {
+      setErrorCobro('El efectivo recibido no cubre el total.');
+      return;
+    }
+    setProcesando(true);
+    setErrorCobro(null);
+    const res = await cobrarEnEfectivo({
+      idempotencia: idemRef.current,
+      recibido: recibidoNum,
+      lineas: carrito.map((l) => ({ productoId: l.id, cantidad: l.cantidad })),
+    });
+    if (res.ok) {
+      setExito({ vuelto: res.vuelto ?? 0, total: res.total ?? totales.total });
+      setCarrito([]);
+      setCobrando(false);
+      setProcesando(false);
+      router.refresh(); // recarga el catálogo con la existencia ya descontada
+      buscarRef.current?.focus();
+    } else {
+      setProcesando(false);
+      setErrorCobro(res.error ?? 'No se pudo cobrar.');
+    }
+  }
+
   function agregar(it: CatalogoItem) {
     if (!it) return;
     setCarrito((c) => {
@@ -115,7 +189,16 @@ export function CajaCliente({ catalogo }: { catalogo: CatalogoItem[] }) {
       }
       return [
         ...c,
-        { id: it.id, nombre: it.nombre, precio: it.precio, exentoItbis: it.exentoItbis, cantidad: 1, existencia: it.existencia },
+        {
+          id: it.id,
+          nombre: it.nombre,
+          precio: it.precio,
+          exentoItbis: it.exentoItbis,
+          cantidad: 1,
+          existencia: it.existencia,
+          controlado: it.controlado,
+          receta: it.receta,
+        },
       ];
     });
     setQuery('');
@@ -134,13 +217,24 @@ export function CajaCliente({ catalogo }: { catalogo: CatalogoItem[] }) {
   // Teclas de función globales (F2/F4/F8/Supr) — el cajero no suelta el escáner.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      if (cobrando) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          void confirmarCobro();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          cerrarCobro();
+        }
+        return;
+      }
       if (e.key === 'F2') {
         e.preventDefault();
         const ult = carrito[carrito.length - 1];
         if (ult) qtyRefs.current[ult.id]?.select();
       } else if (e.key === 'F4') {
         e.preventDefault();
-        if (carrito.length > 0) setAviso('El cobro llega en la próxima pieza (pago mixto, vuelto, fiado, FEFO).');
+        if (bloqueadoClinico) setAviso('Esta venta incluye un controlado o de receta. Solo el farmacéutico puede despacharla.');
+        else abrirCobro();
       } else if (e.key === 'F8') {
         e.preventDefault();
         if (carrito.length > 0) setAviso('Poner en espera (F8) llega en la próxima pieza.');
@@ -151,7 +245,8 @@ export function CajaCliente({ catalogo }: { catalogo: CatalogoItem[] }) {
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [carrito, query]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carrito, query, cobrando, bloqueadoClinico, recibido]);
 
   function onBuscarKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'ArrowDown') {
@@ -337,9 +432,20 @@ export function CajaCliente({ catalogo }: { catalogo: CatalogoItem[] }) {
 
       {/* Abajo fijo: total + cobrar */}
       <div className="border-t border-line bg-surface px-4 py-3">
+        {exito && (
+          <div className="mb-2 flex items-center gap-2 rounded-control border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-700 dark:text-emerald-300">
+            <Check className="h-4 w-4" /> Cobrado {formatMoney(exito.total)}
+            {exito.vuelto > 0 && <span className="font-semibold">· Vuelto {formatMoney(exito.vuelto)}</span>}
+          </div>
+        )}
         {aviso && (
           <div className="mb-2 rounded-control border border-amber-500/40 bg-amber-500/5 px-3 py-1.5 text-xs text-amber-700 dark:text-amber-300">
             {aviso}
+          </div>
+        )}
+        {bloqueadoClinico && carrito.length > 0 && (
+          <div className="mb-2 flex items-center gap-2 rounded-control border border-rose-500/40 bg-rose-500/5 px-3 py-1.5 text-xs text-rose-700 dark:text-rose-300">
+            <Lock className="h-3.5 w-3.5" /> El carrito incluye un controlado o de receta. Solo el farmacéutico puede despacharlo.
           </div>
         )}
         <div className="flex items-center justify-between gap-4">
@@ -353,8 +459,8 @@ export function CajaCliente({ catalogo }: { catalogo: CatalogoItem[] }) {
               <div className="font-display text-3xl font-bold text-ink tabular-nums">{formatMoney(totales.total)}</div>
             </div>
             <button
-              onClick={() => carrito.length > 0 && setAviso('El cobro llega en la próxima pieza (pago mixto, vuelto, fiado, FEFO).')}
-              disabled={carrito.length === 0}
+              onClick={abrirCobro}
+              disabled={carrito.length === 0 || bloqueadoClinico}
               className="brand-gradient inline-flex items-center gap-2 rounded-control px-6 py-3 text-base font-semibold text-white disabled:opacity-40"
             >
               Cobrar <span className="text-xs opacity-80">F4</span>
@@ -362,6 +468,87 @@ export function CajaCliente({ catalogo }: { catalogo: CatalogoItem[] }) {
           </div>
         </div>
       </div>
+
+      {/* Modal de cobro en efectivo */}
+      {cobrando && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={cerrarCobro}>
+          <div
+            className="w-full max-w-md rounded-card border border-line bg-surface p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 font-display text-lg font-semibold text-ink">
+                <Banknote className="h-5 w-5 text-accent" /> Cobro en efectivo
+              </div>
+              <button onClick={cerrarCobro} className="text-ink-faint hover:text-ink" aria-label="Cerrar">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mb-4 flex items-baseline justify-between">
+              <span className="text-sm text-ink-soft">Total a cobrar</span>
+              <span className="font-display text-3xl font-bold text-ink tabular-nums">{formatMoney(totales.total)}</span>
+            </div>
+
+            <label className="mb-1 block text-xs text-ink-soft">Efectivo recibido</label>
+            <input
+              ref={recibidoRef}
+              type="number"
+              min="0"
+              step="any"
+              inputMode="decimal"
+              value={recibido}
+              onChange={(e) => setRecibido(e.target.value)}
+              placeholder="0.00"
+              className={`${inputBase} text-right tabular-nums`}
+            />
+
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <button
+                onClick={() => setRecibido(String(totales.total))}
+                className="rounded-control border border-line px-3 py-1 text-xs text-ink-soft hover:bg-canvas"
+              >
+                Exacto
+              </button>
+              {DENOMINACIONES.map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setRecibido((r) => String((Number(r) || 0) + d))}
+                  className="rounded-control border border-line px-3 py-1 text-xs text-ink-soft tabular-nums hover:bg-canvas"
+                >
+                  +{formatNumber(d)}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-4 flex items-baseline justify-between border-t border-line pt-3">
+              <span className="text-sm text-ink-soft">Vuelto</span>
+              <span
+                className={`font-display text-2xl font-bold tabular-nums ${
+                  vuelto < -0.001 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
+                }`}
+              >
+                {vuelto < -0.001 ? 'Falta ' + formatMoney(-vuelto) : formatMoney(Math.max(0, vuelto))}
+              </span>
+            </div>
+
+            {errorCobro && (
+              <div className="mt-3 rounded-control border border-rose-500/40 bg-rose-500/5 px-3 py-1.5 text-xs text-rose-700 dark:text-rose-300">
+                {errorCobro}
+              </div>
+            )}
+
+            <button
+              onClick={() => void confirmarCobro()}
+              disabled={procesando || recibidoNum + 0.001 < totales.total}
+              className="brand-gradient mt-4 inline-flex w-full items-center justify-center gap-2 rounded-control px-6 py-3 text-base font-semibold text-white disabled:opacity-40"
+            >
+              {procesando ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
+              {procesando ? 'Cobrando…' : 'Confirmar cobro'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
-import { requireCapability } from '@/lib/auth';
+import { requireCapability, getSessionUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
+import { can } from '@/lib/roles';
 import { normaliza } from '@/lib/catalogos';
 import { formatConcentracion } from '@/lib/producto';
 import { CajaCliente, type CatalogoItem } from './CajaCliente';
@@ -28,6 +29,8 @@ interface Row {
 
 export default async function CajaPage() {
   await requireCapability('ver_operacion');
+  const user = await getSessionUser();
+  const puedeDespacharControlados = user ? can(user.role, 'despachar_controlados') : false;
   const supabase = createClient();
 
   // El catálogo se precarga UNA vez al abrir la caja: buscar nunca toca la red.
@@ -94,5 +97,5 @@ export default async function CajaPage() {
     };
   });
 
-  return <CajaCliente catalogo={catalogo} />;
+  return <CajaCliente catalogo={catalogo} puedeDespacharControlados={puedeDespacharControlados} />;
 }
