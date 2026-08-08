@@ -700,3 +700,41 @@ Pendiente.
 
 ## 🔗 PR
 Pendiente.
+
+---
+
+# TANDA 17 · PIEZA 1 — CONFIGURACIÓN (AJUSTES) · 2026-08-08
+
+## ✅ Construido (PR pendiente) — SIN migración (usa `configuracion` de 0020)
+
+- **Página `/ajustes`** (solo `configurar_sistema` = Dueño/Admin), sobre la tabla
+  clave-valor **`configuracion`** que ya existía:
+  - **Identidad de la farmacia**: nombre, RNC, dirección, teléfono.
+  - **Mensaje del recibo** (pie del recibo).
+  - **Avisos y umbrales**: radar de vencimiento (días de anticipación), recordar
+    crónico (días antes), umbral de discrepancia de conteo (RD$).
+  - **Farmacia de turno**: interruptor 24h con rango de fechas opcional.
+- **Ajuste consumido de verdad**: el **radar de `/vencimientos`** ahora lee
+  `dias_alerta_vencimiento` (default 180) en vez de la constante fija. Junto con
+  `umbral_discrepancia_conteo` (que ya se consumía), son **dos** ajustes vivos —
+  la pantalla no es decorativa.
+
+## 🔬 Probado
+- **Upsert idempotente** del ajuste (Postgres local): guardar la misma clave dos
+  veces (120 → 200) deja **1 sola fila** con el último valor (`on conflict
+  (clave, sucursal_id) do update`). ✔
+- `typecheck` / `lint` / `build` en verde; `/ajustes` (3.22 kB) y `/vencimientos`
+  compilan.
+
+## ⚠️ Honesto / pendiente
+- **Identidad, mensaje de recibo y `dias_alerta_cronico` se GUARDAN** pero su
+  consumo pleno es incremental: la identidad/mensaje alimentarán el **recibo
+  imprimible** (pieza diferida de T6) y `dias_alerta_cronico` el recordatorio de
+  `/cronicos`. Se anota como cableado pendiente, no como hecho.
+- **Farmacia de turno**: se guarda; el **banner en el dashboard** se coloca en la
+  Tanda 18 (dashboard vivo), que reconstruye esa pantalla (hoy es un stub en ceros).
+- Artefacto de prueba: solo Postgres local (clave `dias_alerta_vencimiento` de
+  prueba), **purgado en la misma sesión**.
+
+## 🔗 PR
+Pendiente (Tanda 17 · Pieza 1).

@@ -23,6 +23,15 @@ export default async function VencimientosPage() {
   await requireCapability('ver_operacion');
   const supabase = createClient();
 
+  // Ventana del radar: configurable en Ajustes (default 180 días).
+  const { data: cfgVenc } = await supabase
+    .from('configuracion')
+    .select('valor')
+    .eq('clave', 'dias_alerta_vencimiento')
+    .eq('sucursal_id', '00000000-0000-0000-0000-000000000001')
+    .maybeSingle<{ valor: unknown }>();
+  const ventanaRadar = Number(cfgVenc?.valor) > 0 ? Number(cfgVenc?.valor) : 180;
+
   const { data } = await supabase
     .from('lote')
     .select('id, cantidad_actual, costo_unitario, fecha_vencimiento, fecha_recepcion, producto:producto_id ( nombre, precio_venta ), proveedor:proveedor_id ( nombre, acepta_devoluciones, dias_minimos_vida_util_devolucion, porcentaje_recuperacion )')
@@ -81,8 +90,8 @@ export default async function VencimientosPage() {
         limiteDevolucion: ventanaAbierta && limiteDevolucion ? limiteDevolucion.toISOString().slice(0, 10) : null,
       };
     })
-    // El radar no grita por lo que está bien: solo lo que se acerca (≤180 días o vencido).
-    .filter((f) => f.diasRestantes <= 180)
+    // El radar no grita por lo que está bien: solo lo que se acerca (ventana configurable, o vencido).
+    .filter((f) => f.diasRestantes <= ventanaRadar)
     .sort((a, b) => b.valorRiesgo - a.valorRiesgo);
 
   const totalRiesgo = filas.reduce((s, f) => s + f.valorRiesgo, 0);
