@@ -475,3 +475,28 @@ Vercel en verde (Ready) en cada uno.
 
 ## 🔗 PR
 #38.
+
+---
+
+# TANDA 11 — CEREBRO DE COMPRAS Y ENCARGOS · 2026-08-08
+
+## ✅ Pieza 1 (PR #39) — Encargos
+
+- **Migración `0034`** (**aplicada a producción**): `encargo` (producto en catálogo
+  o texto libre, cliente/teléfono, cantidad, estado
+  pendiente→pedido→llegó→entregado / no_volvió). RLS+FORCE.
+- **App `/encargos`**: registrar el encargo, avanzar estado con un clic, **WhatsApp
+  de un clic** cuando llegó ("llegó lo que encargó"), y el contador de **no
+  atendidos = ventas perdidas medibles**.
+
+## 🔬 Probado
+- `0034` idempotente (3×); RLS FORCE. **Aplicada a producción**. ✅
+- `typecheck` / `lint` / `build` en verde.
+
+## ⚠️ Pendiente (Tanda 11)
+- **Punto de reorden dinámico** (velocidad de consumo + tiempo de entrega), **orden
+  de compra que se genera sola** con WhatsApp, **comparador de precios entre
+  droguerías**, y **sugerencia de compra por perfil de crónicos** — pieza siguiente.
+
+## 🔗 PR
+#39.
