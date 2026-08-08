@@ -111,6 +111,48 @@ const RECURSOS: Record<string, Recurso> = {
       return { headers: ['Proveedor', 'Monto', 'Emisión', 'Vencimiento', 'Estado'], rows };
     },
   },
+  movimientos: {
+    cap: 'gestionar_inventario',
+    archivo: 'movimientos-inventario',
+    async build(supabase) {
+      const { data } = await supabase
+        .from('movimiento_inventario')
+        .select('ocurrido_en, tipo, cantidad, cantidad_resultante, motivo, referencia, producto:producto_id ( nombre )')
+        .order('ocurrido_en', { ascending: false })
+        .limit(5000);
+      const rows = ((data as unknown as Array<{ ocurrido_en: string; tipo: string; cantidad: number; cantidad_resultante: number | null; motivo: string | null; referencia: string | null; producto: { nombre?: string } | null }>) ?? [])
+        .map((m) => [m.ocurrido_en, m.producto?.nombre ?? '—', m.tipo, Number(m.cantidad), m.cantidad_resultante ?? '', m.motivo ?? '', m.referencia ?? '']);
+      return { headers: ['Fecha', 'Producto', 'Tipo', 'Cantidad', 'Resultante', 'Motivo', 'Referencia'], rows };
+    },
+  },
+  comprobantes: {
+    cap: 'ver_finanzas',
+    archivo: 'comprobantes-fiscales',
+    async build(supabase) {
+      const { data } = await supabase
+        .from('comprobante')
+        .select('emitido_en, tipo, ncf, ncf_modificado, rnc_receptor, subtotal, itbis, total, estado')
+        .order('emitido_en', { ascending: false })
+        .limit(5000);
+      const rows = ((data as unknown as Array<{ emitido_en: string; tipo: string; ncf: string; ncf_modificado: string | null; rnc_receptor: string | null; subtotal: number; itbis: number; total: number; estado: string }>) ?? [])
+        .map((c) => [c.emitido_en, c.tipo, c.ncf, c.ncf_modificado ?? '', c.rnc_receptor ?? '', Number(c.subtotal), Number(c.itbis), Number(c.total), c.estado]);
+      return { headers: ['Fecha', 'Tipo', 'NCF', 'NCF modificado', 'RNC receptor', 'Subtotal', 'ITBIS', 'Total', 'Estado'], rows };
+    },
+  },
+  'libro-controlado': {
+    cap: 'despachar_controlados',
+    archivo: 'libro-controlados',
+    async build(supabase) {
+      const { data } = await supabase
+        .from('libro_controlado')
+        .select('despachado_en, cantidad, paciente_nombre, producto:producto_id ( nombre ), farmaceutico:farmaceutico_id ( nombre )')
+        .order('despachado_en', { ascending: false })
+        .limit(5000);
+      const rows = ((data as unknown as Array<{ despachado_en: string; cantidad: number; paciente_nombre: string; producto: { nombre?: string } | null; farmaceutico: { nombre?: string } | null }>) ?? [])
+        .map((l) => [l.despachado_en, l.producto?.nombre ?? '—', Number(l.cantidad), l.paciente_nombre, l.farmaceutico?.nombre ?? '—']);
+      return { headers: ['Fecha', 'Producto', 'Cantidad', 'Paciente', 'Farmacéutico'], rows };
+    },
+  },
 };
 
 export async function GET(_req: Request, { params }: { params: Promise<{ recurso: string }> }) {
